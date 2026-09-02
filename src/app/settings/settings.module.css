@@ -1,0 +1,78 @@
+.settingsPage {
+  width: min(880px, 100%);
+  min-height: calc(100svh - var(--header-height));
+  margin: 0 auto;
+  padding: 72px var(--page-gutter);
+}
+
+.settingsPage header {
+  padding-bottom: 40px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.settingsPage header p {
+  margin: 0 0 10px;
+  color: var(--accent);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+}
+
+.settingsPage h1 {
+  margin: 0 0 10px;
+  font-size: 44px;
+  font-weight: 470;
+  letter-spacing: -0.04em;
+}
+
+.settingsPage header span,
+.settingsPage article span {
+  color: var(--text-secondary);
+}
+
+.settingsPage section {
+  display: grid;
+}
+
+.settingsPage article {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--divider);
+}
+
+.settingsPage article svg {
+  color: var(--accent);
+}
+
+.settingsPage article div {
+  display: grid;
+  gap: 4px;
+}
+
+.settingsPage article strong {
+  font-weight: 560;
+}
+
+.settingsPage article span {
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .settingsPage {
+    padding-top: 44px;
+  }
+
+  .settingsPage h1 {
+    font-size: 36px;
+  }
+
+  .settingsPage article {
+    grid-template-columns: auto 1fr;
+  }
+
+  .settingsPage article > span {
+    grid-column: 2;
+  }
+}

@@ -1,0 +1,39 @@
+# Dependencies
+/node_modules/
+/.pnp
+.pnp.*
+
+# Next.js build output
+/.next/
+/out/
+/build/
+
+# Tests and generated TypeScript state
+/coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Local environment files
+.env*
+!.env.example
+
+# Deployment tooling
+/.vercel/
+
+# Package-manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editors and operating systems
+/.vscode/
+/.idea/
+.DS_Store
+Thumbs.db
+
+# Local Codex design and QA artifacts
+/design-qa.md
+/docs/superpowers/
+/.codex/
+/.agents/

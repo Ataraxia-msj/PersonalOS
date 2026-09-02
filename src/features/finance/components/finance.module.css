@@ -1,0 +1,763 @@
+.financePage {
+  width: min(100%, var(--content-max));
+  min-height: calc(100svh - var(--header-height));
+  margin: 0 auto;
+  padding: 38px var(--page-gutter) 72px;
+}
+
+.financeHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.financeHeader h1 {
+  margin: 0 0 12px;
+  font-size: clamp(34px, 3vw, 48px);
+  font-weight: 470;
+  letter-spacing: -0.045em;
+  line-height: 1.1;
+}
+
+.monthButton,
+.addTransaction {
+  min-height: 40px;
+  border: 1px solid var(--divider-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-secondary);
+}
+
+.monthButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 13px;
+  cursor: pointer;
+}
+
+.monthButton:hover,
+.addTransaction:hover {
+  border-color: rgb(217 119 87 / 45%);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+
+.addTransaction {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 13px;
+  font-size: 14px;
+}
+
+.addTransaction kbd {
+  padding: 2px 6px;
+  border: 1px solid var(--divider);
+  border-radius: 5px;
+  background: var(--bg-deep);
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 11px;
+}
+
+.tabs {
+  display: flex;
+  gap: 48px;
+  margin-top: 26px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--divider);
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab,
+.tabActive {
+  position: relative;
+  flex: 0 0 auto;
+  padding: 13px 4px 16px;
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.tab:hover,
+.tabActive {
+  color: var(--text-primary);
+}
+
+.tabActive {
+  color: var(--accent-strong);
+}
+
+.tabActive::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: var(--accent);
+  content: "";
+}
+
+.overviewGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(300px, 1fr);
+  gap: 0;
+  padding-top: 42px;
+}
+
+.overviewMain {
+  min-width: 0;
+  padding-right: clamp(32px, 4vw, 60px);
+}
+
+.assetSummary {
+  padding: 4px 0 36px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.assetSummary > p {
+  margin: 0 0 8px;
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.assetSummary > strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: clamp(42px, 5vw, 64px);
+  font-weight: 430;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.monthSummary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(620px, 100%);
+  margin-top: 30px;
+}
+
+.monthSummary > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 3px 11px;
+}
+
+.monthSummary > div + div {
+  padding-left: 40px;
+  border-left: 1px solid var(--divider);
+}
+
+.incomeDot,
+.expenseDot {
+  width: 8px;
+  height: 8px;
+  grid-row: 1 / 3;
+  border-radius: 50%;
+}
+
+.incomeDot {
+  background: var(--accent);
+}
+
+.expenseDot {
+  background: var(--sand);
+}
+
+.monthSummary p,
+.monthSummary strong {
+  margin: 0;
+}
+
+.monthSummary p {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.monthSummary strong {
+  color: var(--text-primary);
+  font-size: 19px;
+  font-weight: 520;
+  font-variant-numeric: tabular-nums;
+}
+
+.trendSection {
+  padding-top: 32px;
+}
+
+.sectionHeading,
+.moduleTitleRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.sectionHeading h2,
+.recentPanel h2,
+.moduleTitleRow h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 19px;
+  font-weight: 540;
+  letter-spacing: -0.02em;
+}
+
+.sectionHeading p,
+.moduleTitleRow p {
+  margin: 5px 0 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.legend i {
+  width: 18px;
+  height: 2px;
+}
+
+.legendIncome {
+  background: var(--accent);
+}
+
+.legendExpense {
+  background: var(--sand);
+}
+
+.chartFrame {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  padding-top: 14px;
+}
+
+.chartCanvas {
+  width: 100%;
+  min-width: 620px;
+  height: 300px;
+}
+
+.recentPanel {
+  min-width: 0;
+  padding-left: clamp(30px, 3vw, 48px);
+  border-left: 1px solid var(--divider);
+}
+
+.recentPanel h2 {
+  margin-bottom: 18px;
+}
+
+.recentList {
+  display: grid;
+}
+
+.recentRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 88px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.transactionIcon,
+.accountIcon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-sm);
+  background: rgb(34 32 29 / 58%);
+  color: var(--text-secondary);
+}
+
+.recentRow > div {
+  min-width: 0;
+}
+
+.recentRow strong,
+.recentRow time {
+  display: block;
+}
+
+.recentRow strong {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 530;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recentRow time {
+  margin-top: 3px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.amount,
+.positiveAmount {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.amount {
+  color: var(--text-primary);
+}
+
+.positiveAmount {
+  color: var(--accent-strong);
+}
+
+.viewAll {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 24px;
+  color: var(--accent-strong);
+  font-size: 14px;
+}
+
+.moduleSection {
+  padding-top: 42px;
+}
+
+.moduleTitleRow {
+  padding-bottom: 24px;
+}
+
+.moduleTitleRow h2 {
+  font-size: 28px;
+}
+
+.eyebrow {
+  margin-bottom: 8px !important;
+  color: var(--accent) !important;
+  font-size: 10px !important;
+  letter-spacing: 0.16em;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.searchField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 230px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-tertiary);
+}
+
+.searchField:focus-within {
+  border-color: rgb(217 119 87 / 55%);
+}
+
+.searchField input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.categoryFilter select {
+  min-height: 40px;
+  padding: 0 32px 0 11px;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border-top: 1px solid var(--divider);
+}
+
+.dataTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.dataTable th,
+.dataTable td {
+  padding: 18px 14px;
+  border-bottom: 1px solid var(--divider);
+  text-align: left;
+}
+
+.dataTable thead th {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.dataTable tbody th {
+  color: var(--text-primary);
+  font-weight: 540;
+}
+
+.dataTable tbody td {
+  color: var(--text-secondary);
+}
+
+.dataTable th:last-child,
+.dataTable td:last-child {
+  text-align: right;
+}
+
+.emptyState {
+  margin: 0;
+  padding: 42px 0;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.budgetRows,
+.accountRows,
+.analysisRows {
+  border-top: 1px solid var(--divider);
+}
+
+.budgetRow {
+  display: grid;
+  gap: 16px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--divider);
+}
+
+.budgetMeta,
+.budgetMeta > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.budgetMeta > div {
+  min-width: 0;
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.budgetMeta strong {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 540;
+  font-variant-numeric: tabular-nums;
+}
+
+.budgetMeta span {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.budgetTrack {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-raised);
+}
+
+.budgetTrack span {
+  display: block;
+  width: var(--budget-progress);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.accountRow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  min-height: 84px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.accountRow > div {
+  display: grid;
+  gap: 3px;
+}
+
+.accountRow strong {
+  font-size: 14px;
+  font-weight: 540;
+}
+
+.accountRow span {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.accountBalance,
+.negativeBalance {
+  font-variant-numeric: tabular-nums;
+}
+
+.negativeBalance {
+  color: var(--negative);
+}
+
+.analysisTotal {
+  display: grid;
+  justify-items: end;
+}
+
+.analysisTotal span {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.analysisTotal strong {
+  font-size: 22px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.analysisRow {
+  display: grid;
+  grid-template-columns: 120px 1fr 90px;
+  align-items: center;
+  gap: 20px;
+  min-height: 66px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.analysisRow > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.analysisRow strong {
+  font-size: 13px;
+  font-weight: 530;
+}
+
+.analysisRow span {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.analysisRow > strong {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.analysisBar {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-raised);
+}
+
+.analysisBar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.insightNote {
+  margin-top: 30px;
+  padding: 18px 20px;
+  border: 1px solid rgb(217 119 87 / 26%);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+}
+
+.insightNote strong {
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 560;
+}
+
+.insightNote p {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+@media (max-width: 900px) {
+  .overviewGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .overviewMain {
+    padding-right: 0;
+  }
+
+  .recentPanel {
+    margin-top: 36px;
+    padding: 32px 0 0;
+    border-top: 1px solid var(--divider);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .financePage {
+    padding-top: 28px;
+  }
+
+  .financeHeader {
+    align-items: center;
+  }
+
+  .financeHeader h1 {
+    font-size: 34px;
+  }
+
+  .addTransaction {
+    width: 40px;
+    padding: 0;
+    justify-content: center;
+    font-size: 0;
+  }
+
+  .addTransaction kbd {
+    display: none;
+  }
+
+  .tabs {
+    width: calc(100% + var(--page-gutter) * 2);
+    margin-left: calc(var(--page-gutter) * -1);
+    padding: 0 var(--page-gutter);
+    gap: 30px;
+  }
+
+  .overviewGrid,
+  .moduleSection {
+    padding-top: 30px;
+  }
+
+  .assetSummary > strong {
+    font-size: 40px;
+  }
+
+  .monthSummary {
+    gap: 20px;
+  }
+
+  .monthSummary > div + div {
+    padding-left: 20px;
+  }
+
+  .chartFrame {
+    width: 100%;
+    overflow-x: visible;
+  }
+
+  .chartCanvas {
+    min-width: 0;
+    height: 270px;
+  }
+
+  .recentRow {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    min-height: 78px;
+  }
+
+  .moduleTitleRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filters {
+    width: 100%;
+  }
+
+  .searchField {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .dataTable thead {
+    display: none;
+  }
+
+  .dataTable,
+  .dataTable tbody,
+  .dataTable tr,
+  .dataTable th,
+  .dataTable td {
+    display: block;
+    width: 100%;
+  }
+
+  .dataTable tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--divider);
+  }
+
+  .dataTable th,
+  .dataTable td {
+    padding: 5px 0;
+    border: 0;
+    text-align: left !important;
+  }
+
+  .dataTable th::before,
+  .dataTable td::before {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--text-tertiary);
+    content: attr(data-label);
+    font-size: 10px;
+    font-weight: 400;
+  }
+
+  .accountRow {
+    grid-template-columns: auto 1fr;
+    padding: 16px 0;
+  }
+
+  .accountBalance,
+  .negativeBalance {
+    grid-column: 2;
+  }
+
+  .analysisRow {
+    grid-template-columns: 90px 1fr 78px;
+    gap: 12px;
+  }
+}
