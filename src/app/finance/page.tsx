@@ -1,6 +1,6 @@
 import { FinanceOverview } from "@/features/finance/components/finance-overview";
-import { financeDataset } from "@/features/finance/data";
+import { getFinanceOverviewData } from "@/lib/finance/service";
 
-export default function FinancePage() {
-  return <FinanceOverview data={financeDataset} />;
+export default async function FinancePage() {
+  return <FinanceOverview data={await getFinanceOverviewData()} />;
 }

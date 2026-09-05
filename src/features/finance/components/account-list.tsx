@@ -57,6 +57,7 @@ export function AccountList({ accounts }: AccountListProps) {
           );
         })}
       </div>
+      {accounts.length === 0 ? <p className={styles.emptyState}>暂无账户数据</p> : null}
     </section>
   );
 }

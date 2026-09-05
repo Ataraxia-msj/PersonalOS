@@ -13,18 +13,18 @@ import {
 import Link from "next/link";
 
 import { formatCurrency, formatShortDate, formatSignedCurrency } from "../format";
-import { getFinanceSummary, getRecentTransactions } from "../selectors";
-import type { FinanceDataset, TransactionIcon } from "../types";
+import type { FinanceOverviewData, TransactionIcon } from "../types";
 import styles from "./finance.module.css";
 import { TrendChart } from "./trend-chart";
 
 interface FinanceOverviewProps {
-  data: FinanceDataset;
+  data: FinanceOverviewData;
 }
 
 const transactionIcons: Record<TransactionIcon, Icon> = {
   home: IconHome,
   briefcase: IconBriefcase,
+  bank: IconBuildingBank,
   train: IconTrain,
   coffee: IconCoffee,
   "shopping-bag": IconShoppingBag,
@@ -34,25 +34,39 @@ const transactionIcons: Record<TransactionIcon, Icon> = {
 };
 
 export function FinanceOverview({ data }: FinanceOverviewProps) {
-  const summary = getFinanceSummary(data);
-  const recentTransactions = getRecentTransactions(data, 4);
+  const recentTransactions = data.transactions.slice(0, 4);
+  const trendPeriod = data.cashflow.length > 0
+    ? `${data.cashflow[0]?.month}至${data.cashflow.at(-1)?.month}`
+    : "暂无月度数据";
+  const formatNullableCurrency = (value: number | null, fractionDigits = 0) =>
+    value === null ? "—" : formatCurrency(value, fractionDigits);
 
   return (
     <div className={styles.overviewGrid}>
       <div className={styles.overviewMain}>
         <section aria-labelledby="asset-heading" className={styles.assetSummary}>
-          <p id="asset-heading">总资产</p>
-          <strong>{formatCurrency(summary.totalAssets, 2)}</strong>
+          <p id="asset-heading">净资产</p>
+          <strong>{formatNullableCurrency(data.netWorth, 2)}</strong>
+          <div className={styles.netWorthDetails}>
+            <div>
+              <span>总资产</span>
+              <strong>{formatNullableCurrency(data.totalAssets, 2)}</strong>
+            </div>
+            <div>
+              <span>总负债</span>
+              <strong>{formatNullableCurrency(data.totalLiabilities, 2)}</strong>
+            </div>
+          </div>
           <div className={styles.monthSummary}>
             <div>
               <span className={styles.incomeDot} />
               <p>本月收入</p>
-              <strong>{formatCurrency(summary.monthlyIncome)}</strong>
+              <strong>{formatNullableCurrency(data.monthlyIncome)}</strong>
             </div>
             <div>
               <span className={styles.expenseDot} />
               <p>本月支出</p>
-              <strong>{formatCurrency(summary.monthlyExpense)}</strong>
+              <strong>{formatNullableCurrency(data.monthlyExpense)}</strong>
             </div>
           </div>
         </section>
@@ -61,7 +75,7 @@ export function FinanceOverview({ data }: FinanceOverviewProps) {
           <div className={styles.sectionHeading}>
             <div>
               <h2 id="trend-heading">收支趋势</h2>
-              <p>2026 年 3 月至 9 月</p>
+              <p>{trendPeriod}</p>
             </div>
             <div aria-label="图例" className={styles.legend}>
               <span><i className={styles.legendIncome} />收入</span>
@@ -75,6 +89,9 @@ export function FinanceOverview({ data }: FinanceOverviewProps) {
       <aside aria-labelledby="recent-heading" className={styles.recentPanel}>
         <h2 id="recent-heading">近期交易</h2>
         <div className={styles.recentList}>
+          {recentTransactions.length === 0 ? (
+            <p className={styles.emptyState}>暂无真实交易数据</p>
+          ) : null}
           {recentTransactions.map((transaction) => {
             const TransactionIcon = transactionIcons[transaction.icon] ?? IconBuildingBank;
             return (

@@ -1,11 +1,11 @@
 import { TransactionList } from "@/features/finance/components/transaction-list";
-import { financeDataset } from "@/features/finance/data";
+import { getTransactionsPageData } from "@/lib/finance/service";
 
-export default function TransactionsPage() {
+export default async function TransactionsPage() {
+  const data = await getTransactionsPageData();
   return (
     <TransactionList
-      accounts={financeDataset.accounts}
-      transactions={financeDataset.transactions}
+      transactions={data.transactions}
     />
   );
 }

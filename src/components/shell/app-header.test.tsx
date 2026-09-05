@@ -34,4 +34,13 @@ describe("AppHeader", () => {
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog", { name: "快速导航" })).not.toBeInTheDocument();
   });
+
+  it("does not render application navigation on the login page", () => {
+    pathnameState.value = "/login";
+
+    render(<AppHeader />);
+
+    expect(screen.queryByRole("banner")).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+  });
 });

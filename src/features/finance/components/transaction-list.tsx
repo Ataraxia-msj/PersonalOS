@@ -1,25 +1,21 @@
 "use client";
 
-import { IconSearch } from "@tabler/icons-react";
+import { IconEdit, IconSearch } from "@tabler/icons-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { formatShortDate, formatSignedCurrency } from "../format";
-import type { Account, Transaction } from "../types";
+import type { Transaction } from "../types";
 import styles from "./finance.module.css";
 
 interface TransactionListProps {
-  accounts: Account[];
   transactions: Transaction[];
 }
 
-export function TransactionList({ accounts, transactions }: TransactionListProps) {
+export function TransactionList({ transactions }: TransactionListProps) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("全部");
 
-  const accountNames = useMemo(
-    () => new Map(accounts.map((account) => [account.id, account.name])),
-    [accounts],
-  );
   const categories = useMemo(
     () => ["全部", ...Array.from(new Set(transactions.map((transaction) => transaction.category)))],
     [transactions],
@@ -41,7 +37,7 @@ export function TransactionList({ accounts, transactions }: TransactionListProps
         <div>
           <p className={styles.eyebrow}>TRANSACTIONS</p>
           <h2 id="transaction-title">交易记录</h2>
-          <p>共 {transactions.length} 笔 mock 交易</p>
+          <p>共 {transactions.length} 笔交易</p>
         </div>
         <div className={styles.filters}>
           <label className={styles.searchField}>
@@ -72,17 +68,22 @@ export function TransactionList({ accounts, transactions }: TransactionListProps
             <tr>
               <th>交易</th>
               <th>类别</th>
+              <th>预算</th>
               <th>账户</th>
               <th>日期</th>
               <th>金额</th>
+              <th><span className="sr-only">操作</span></th>
             </tr>
           </thead>
           <tbody>
             {filteredTransactions.map((transaction) => (
               <tr key={transaction.id}>
-                <th data-label="交易">{transaction.merchant}</th>
+                <th data-label="交易">
+                  <span className={styles.transactionName}>{transaction.merchant}</span>
+                </th>
                 <td data-label="类别">{transaction.category}</td>
-                <td data-label="账户">{accountNames.get(transaction.accountId) ?? "未知账户"}</td>
+                <td data-label="预算">{transaction.budgetLabel}</td>
+                <td data-label="账户">{transaction.accountName}</td>
                 <td data-label="日期">
                   <time dateTime={transaction.date}>{formatShortDate(transaction.date)}</time>
                 </td>
@@ -92,13 +93,26 @@ export function TransactionList({ accounts, transactions }: TransactionListProps
                 >
                   {formatSignedCurrency(transaction.amount)}
                 </td>
+                <td className={styles.transactionActions} data-label="操作">
+                  {transaction.editable ? (
+                    <Link
+                      aria-label={`修改${transaction.merchant}`}
+                      className={styles.transactionEditLink}
+                      href={`/finance/transactions/${transaction.id}/edit`}
+                    >
+                      <IconEdit aria-hidden="true" size={16} stroke={1.7} />
+                    </Link>
+                  ) : null}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
       {filteredTransactions.length === 0 ? (
-        <p className={styles.emptyState}>没有符合条件的交易</p>
+        <p className={styles.emptyState}>
+          {transactions.length === 0 ? "暂无真实交易数据" : "没有符合条件的交易"}
+        </p>
       ) : null}
     </section>
   );

@@ -1,6 +1,6 @@
 import { AccountList } from "@/features/finance/components/account-list";
-import { financeDataset } from "@/features/finance/data";
+import { getAccountsPageData } from "@/lib/finance/service";
 
-export default function AccountsPage() {
-  return <AccountList accounts={financeDataset.accounts} />;
+export default async function AccountsPage() {
+  return <AccountList accounts={await getAccountsPageData()} />;
 }

@@ -15,6 +15,13 @@ const primaryLinks = [
 
 export function AppHeader() {
   const pathname = usePathname();
+
+  if (pathname === "/login") return null;
+
+  return <AuthenticatedHeader pathname={pathname} />;
+}
+
+function AuthenticatedHeader({ pathname }: Readonly<{ pathname: string }>) {
   const [commandOpen, setCommandOpen] = useState(false);
 
   const handleCommand = useCallback(() => {

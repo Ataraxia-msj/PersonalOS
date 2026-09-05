@@ -1,6 +1,6 @@
 import { BudgetList } from "@/features/finance/components/budget-list";
-import { financeDataset } from "@/features/finance/data";
+import { getBudgetPageData } from "@/lib/finance/service";
 
-export default function BudgetPage() {
-  return <BudgetList budgets={financeDataset.budgets} />;
+export default async function BudgetPage() {
+  return <BudgetList months={await getBudgetPageData()} />;
 }
