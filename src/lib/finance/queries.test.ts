@@ -13,6 +13,7 @@ import {
   getNetWorth,
   getRecentTransactions,
   getTransactions,
+  getTransactionAccountCurrencies,
   type FinanceQueryClient,
 } from "./queries";
 
@@ -34,6 +35,24 @@ function createQueryDouble(result: { data: unknown; error: unknown }) {
 }
 
 describe("Finance View queries", () => {
+  it("reads currencies including inactive historical accounts from the real balances View", async () => {
+    const query = createQueryDouble({ data: [{ account_id: "inactive", currency: "USD" }], error: null });
+    expect(await getTransactionAccountCurrencies(query.client)).toEqual([{ account_id: "inactive", currency: "USD" }]);
+    expect(query.from).toHaveBeenCalledWith("vw_account_balances");
+    expect(query.calls).toContainEqual(["select", "account_id,currency"]);
+    expect(query.calls).not.toContainEqual(["eq", "is_active", true]);
+  });
+  it("reads both transfer lines even when they straddle a page boundary", async () => {
+    const first = Array.from({ length: 500 }, (_, i) => ({ entry_id: `entry-${i}`, line_sort_order: 0 }));
+    const range = vi.fn().mockImplementation(async (start: number) => ({
+      data: start === 0 ? first : [{ entry_id: "entry-499", line_sort_order: 1 }], error: null,
+    }));
+    const chain = { select: () => chain, eq: () => chain, order: () => chain, range,
+      then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: first, error: null }).then(resolve) };
+    const rows = await getTransactions({ from: () => chain } as unknown as FinanceQueryClient);
+    expect(rows).toHaveLength(501);
+    expect(rows.filter((row) => row.entry_id === "entry-499")).toHaveLength(2);
+  });
   it("reads net worth as a single View row", async () => {
     const query = createQueryDouble({ data: { net_worth: 100 }, error: null });
 

@@ -33,16 +33,18 @@ import {
   getNetWorth,
   getRecentTransactions,
   getTransactions,
+  getTransactionAccountCurrencies,
 } from "./queries";
 import { shanghaiDate } from "./budget-validation";
 
 export async function getFinanceOverviewData(): Promise<FinanceOverviewData> {
   const client = await createClient();
-  const [netWorthRow, activeSummary, monthlySummaries, transactionLines] = await Promise.all([
+  const [netWorthRow, activeSummary, monthlySummaries, transactionLines, currencies] = await Promise.all([
     getNetWorth(client),
     getActiveMonthlySummary(client),
     getMonthlyFinancialSummaries(client),
     getRecentTransactions(client),
+    getTransactionAccountCurrencies(client),
   ]);
   const netWorth = adaptNetWorth(netWorthRow);
 
@@ -53,7 +55,7 @@ export async function getFinanceOverviewData(): Promise<FinanceOverviewData> {
     netWorth: netWorth?.net_worth ?? null,
     totalAssets: netWorth?.total_assets ?? null,
     totalLiabilities: netWorth?.total_liabilities ?? null,
-    transactions: adaptTransactions(transactionLines).slice(0, 4),
+    transactions: adaptTransactions(transactionLines, currencies).slice(0, 4),
   };
 }
 
@@ -85,7 +87,8 @@ export async function getTransactionsPageData(): Promise<{
   transactions: Transaction[];
 }> {
   const client = await createClient();
-  return { transactions: adaptTransactions(await getTransactions(client)) };
+  const [lines, currencies] = await Promise.all([getTransactions(client), getTransactionAccountCurrencies(client)]);
+  return { transactions: adaptTransactions(lines, currencies) };
 }
 
 export async function getAnalysisPageData(): Promise<CategorySpending[]> {

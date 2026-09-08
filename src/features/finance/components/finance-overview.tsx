@@ -12,7 +12,7 @@ import {
 } from "@tabler/icons-react";
 import Link from "next/link";
 
-import { formatCurrency, formatShortDate, formatSignedCurrency } from "../format";
+import { formatCurrency, formatShortDate, formatTransactionAmount } from "../format";
 import type { FinanceOverviewData, TransactionIcon } from "../types";
 import styles from "./finance.module.css";
 import { TrendChart } from "./trend-chart";
@@ -101,10 +101,11 @@ export function FinanceOverview({ data }: FinanceOverviewProps) {
                 </span>
                 <div>
                   <strong>{transaction.merchant}</strong>
+                  {transaction.transfer ? <small>{transaction.category} · {transaction.accountName}</small> : null}
                   <time dateTime={transaction.date}>{formatShortDate(transaction.date)}</time>
                 </div>
-                <span className={transaction.amount > 0 ? styles.positiveAmount : styles.amount}>
-                  {formatSignedCurrency(transaction.amount)}
+                <span className={!transaction.transfer && transaction.amount !== null && transaction.amount > 0 ? styles.positiveAmount : styles.amount}>
+                  {formatTransactionAmount(transaction)}
                 </span>
               </article>
             );

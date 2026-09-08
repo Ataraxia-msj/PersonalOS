@@ -28,7 +28,8 @@ describe("BudgetForm", () => {
     const submitted = action.mock.calls[0][1] as FormData;
     expect(Object.fromEntries(submitted)).toMatchObject({ month: "2026-09", plannedIncome: "2000", "allocation:bucket-one": "500.25", "allocation:bucket-two": "0" });
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "保存预算" })).toBeDisabled();
+    // The action resolving is not the same as React committing its final form status.
+    expect(await screen.findByRole("button", { name: "保存预算" })).toBeDisabled();
   });
 
   it("opens an existing month instead of allowing duplicate creation", () => {

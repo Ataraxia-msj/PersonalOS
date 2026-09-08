@@ -40,6 +40,7 @@ export function SpendingAnalysis({ spending }: SpendingAnalysisProps) {
           </article>
         ))}
       </div>
+      <p className={styles.budgetFootnote}>储蓄、投资为累计投入，转回不冲减；不是净增资产。还款仅含本金。</p>
     </section>
   );
 }

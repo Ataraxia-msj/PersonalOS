@@ -25,7 +25,7 @@ export function getSpendingByCategory(data: FinanceDataset): CategorySpending[] 
   const totals = new Map<string, number>();
 
   for (const transaction of data.transactions) {
-    if (transaction.amount >= 0) continue;
+    if (transaction.transfer || transaction.amount === null || transaction.amount >= 0) continue;
     totals.set(
       transaction.category,
       (totals.get(transaction.category) ?? 0) + Math.abs(transaction.amount),

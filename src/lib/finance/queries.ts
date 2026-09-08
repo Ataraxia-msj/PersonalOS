@@ -16,6 +16,13 @@ import type {
 import { shanghaiDate } from "./budget-validation";
 
 export type FinanceQueryClient = SupabaseClient<Database>;
+export type TransactionAccountCurrency = Pick<AccountBalanceView, "account_id" | "currency">;
+
+export async function getTransactionAccountCurrencies(client: FinanceQueryClient): Promise<TransactionAccountCurrency[]> {
+  // Include inactive accounts: their historical transactions still need truthful currency labels.
+  return readPages("vw_account_balances", (start, end) => client.from("vw_account_balances")
+    .select("account_id,currency").order("account_id").range(start, end));
+}
 
 function readResult<T>(view: string, data: T, error: { message: string } | null): T {
   if (error) {
@@ -113,7 +120,7 @@ export async function getBudgetBuckets(client: FinanceQueryClient): Promise<Budg
 
 export async function assertBudgetAttributionSchema(client: FinanceQueryClient): Promise<void> {
   const { error } = await client.from("vw_transaction_details").select("saved_budget_bucket_id").limit(0);
-  if (error) throw new Error("预算归属读取不可用，请确认数据库迁移已部署且当前用户有读取权限。");
+  if (error) throw new Error("预算归属读取不可用，请确认数据库迁移已部署且当前用户有读取权限。", { cause: new Error(error.message) });
 }
 export async function getBudgetPeriods(client: FinanceQueryClient): Promise<BudgetPeriodRow[]> {
   return readPages("budget_periods", (start, end) => client.from("budget_periods")
@@ -142,13 +149,14 @@ export async function getMonthlyFinancialSummaries(
 async function getConfirmedTransactionLines(
   client: FinanceQueryClient,
 ): Promise<TransactionDetailView[]> {
-  const { data, error } = await client
+  return readPages<TransactionDetailView>("vw_transaction_details", (start, end) => client
     .from("vw_transaction_details")
     .select("*")
     .eq("status", "confirmed")
     .order("occurred_at", { ascending: false })
-    .order("line_sort_order", { ascending: true });
-  return readResult("vw_transaction_details", data ?? [], error);
+    .order("line_sort_order", { ascending: true })
+    .order("entry_id", { ascending: true })
+    .order("line_id", { ascending: true }).range(start, end));
 }
 
 export async function getRecentTransactions(

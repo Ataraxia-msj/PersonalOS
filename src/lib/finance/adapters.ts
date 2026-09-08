@@ -18,6 +18,8 @@ import type {
   NetWorthView,
   TransactionDetailView,
 } from "./types";
+import { shanghaiDate } from "./budget-validation";
+import { transferLabels } from "./transfer-types";
 
 const spendingOrder = ["固定必要开销", "变动必要开销", "自由消费"];
 const allocationOrder = ["储蓄", "投资", "还款"];
@@ -72,8 +74,9 @@ export function adaptAccountBalances(rows: AccountBalanceView[]): Account[] {
   }));
 }
 
-export function adaptTransactions(rows: TransactionDetailView[]): Transaction[] {
+export function adaptTransactions(rows: TransactionDetailView[], currencies: Array<Pick<AccountBalanceView, "account_id" | "currency">> = []): Transaction[] {
   const linesByEntry = new Map<string, TransactionDetailView[]>();
+  const currencyByAccount = new Map(currencies.map((row) => [row.account_id, row.currency]));
 
   for (const row of rows) {
     const lines = linesByEntry.get(row.entry_id) ?? [];
@@ -86,6 +89,20 @@ export function adaptTransactions(rows: TransactionDetailView[]): Transaction[] 
       (left, right) => left.line_sort_order - right.line_sort_order,
     );
     const primaryLine = orderedLines[0];
+    const destination = orderedLines[1];
+    const isTransfer = primaryLine.entry_type === "transfer";
+    const purpose = primaryLine.transfer_purpose ?? null;
+    const sourceCurrency = currencyByAccount.get(primaryLine.account_id);
+    const transferCurrency = sourceCurrency && orderedLines.every((line) => currencyByAccount.get(line.account_id) === sourceCurrency) ? sourceCurrency : null;
+    const supportedTransfer = isTransfer && purpose !== null && Object.hasOwn(transferLabels, purpose)
+      && orderedLines.length === 2 && primaryLine.line_sort_order === 0 && destination.line_sort_order === 1
+      && primaryLine.account_class === "asset" && primaryLine.account_id !== destination.account_id
+      && destination.account_class === (purpose === "debt" ? "liability" : "asset")
+      && Number.isFinite(primaryLine.amount) && primaryLine.amount < 0
+      && destination.amount === (purpose === "debt" ? primaryLine.amount : -primaryLine.amount)
+      && destination.saved_budget_bucket_id === null
+      && orderedLines.every((line) => line.entry_type === "transfer" && line.transfer_purpose === purpose
+        && line.category_id === null && line.source === "manual" && line.status === "confirmed");
     const accountName = Array.from(new Set(orderedLines.map((line) => line.account_name))).join(" / ");
     const categoryNames = Array.from(
       new Set(orderedLines.flatMap((line) => line.category_name ? [line.category_name] : [])),
@@ -99,12 +116,17 @@ export function adaptTransactions(rows: TransactionDetailView[]): Transaction[] 
 
     return {
       accountId: primaryLine.account_id,
-      accountName,
-      amount: primaryLine.entry_type === "expense"
+      accountName: supportedTransfer ? `${primaryLine.account_name} → ${destination.account_name}` : accountName,
+      accounts: Array.from(new Map(orderedLines.map((line) => [line.account_id, { id: line.account_id, name: line.account_name }])).values()),
+      ...(isTransfer ? { transfer: { purpose, legacy: !supportedTransfer, currency: transferCurrency,
+        lines: orderedLines.map((line) => ({ id: line.line_id, accountName: line.account_name, amount: line.amount,
+          memo: line.memo, currency: currencyByAccount.get(line.account_id) ?? null })),
+      } } : {}),
+      amount: isTransfer ? supportedTransfer ? Math.abs(primaryLine.amount) : null : primaryLine.entry_type === "expense"
         ? -Math.abs(primaryLine.amount)
         : primaryLine.amount,
-      category: categoryNames.join(" / ") || transactionTypeLabels[primaryLine.entry_type],
-      date: primaryLine.occurred_at.slice(0, 10),
+      category: isTransfer ? supportedTransfer ? transferLabels[purpose!] : "转账 · 历史格式" : categoryNames.join(" / ") || transactionTypeLabels[primaryLine.entry_type],
+      date: shanghaiDate(new Date(primaryLine.occurred_at)),
       editable:
         primaryLine.entry_type === "expense"
         && primaryLine.source === "manual"

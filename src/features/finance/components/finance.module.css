@@ -309,6 +309,14 @@
   min-width: 0;
 }
 
+.recentRow small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
 .recentRow strong,
 .recentRow time {
   display: block;
@@ -372,9 +380,15 @@
 
 .filters {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
 }
+
+.transactionDetails { margin-top: 8px; font-size: 12px; font-weight: 400; white-space: normal; max-width: 380px; }
+.transactionDetails summary { cursor: pointer; color: var(--accent-strong); }
+.transactionDetails p, .transactionDetails li { color: var(--text-secondary); margin-top: 8px; }
+.transactionDetails ul { padding-left: 18px; }
 
 .searchField {
   display: flex;

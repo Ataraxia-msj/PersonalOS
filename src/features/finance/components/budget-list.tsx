@@ -176,6 +176,7 @@ export function BudgetList({ months, selectedPeriod }: BudgetListProps) {
           </div>
         </div>
         <p className={styles.budgetFootnote}>预算执行数据来自财务汇总 View；总体执行率待后端补充。</p>
+        <p className={styles.budgetFootnote}>储蓄、投资按累计投入统计，转回不冲减；不代表净资产增加。还款预算只记录本金。</p>
       </div>
     </section>
   );

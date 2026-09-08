@@ -17,6 +17,7 @@ import {
   getNetWorth,
   getRecentTransactions,
   getTransactions,
+  getTransactionAccountCurrencies,
 } from "./queries";
 import type { TransactionDetailView } from "./types";
 import {
@@ -46,6 +47,7 @@ vi.mock("./queries", () => ({
   getNetWorth: vi.fn(),
   getRecentTransactions: vi.fn(),
   getTransactions: vi.fn(),
+  getTransactionAccountCurrencies: vi.fn(),
 }));
 
 const client = {} as never;
@@ -108,6 +110,7 @@ describe("Finance service", () => {
     vi.mocked(getMonthlyFinancialSummaries).mockResolvedValue([]);
     vi.mocked(getRecentTransactions).mockResolvedValue([]);
     vi.mocked(getTransactions).mockResolvedValue([]);
+    vi.mocked(getTransactionAccountCurrencies).mockResolvedValue([]);
   });
 
   it("builds overview data from net worth, monthly, and recent transaction Views", async () => {

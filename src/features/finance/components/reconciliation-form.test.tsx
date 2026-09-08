@@ -61,7 +61,7 @@ describe("balance reconciliation UI", () => {
     mount(); await preview(); await userEvent.click(screen.getByRole("button", { name: "确认校准" }));
     await screen.findByText("结果未确认");
     expect(screen.queryByRole("button", { name: "返回修改" })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "重试同一次校准" }));
+    await userEvent.click(await screen.findByRole("button", { name: "重试同一次校准" }));
     await waitFor(() => expect(saveAction).toHaveBeenCalledTimes(2));
     const first = saveAction.mock.calls[0][1] as FormData, second = saveAction.mock.calls[1][1] as FormData;
     expect(first.get("requestId")).toBe(requestId); expect([...first]).toEqual([...second]);

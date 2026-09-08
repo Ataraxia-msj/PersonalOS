@@ -246,6 +246,7 @@ describe("Finance View adapters", () => {
       {
         accountId: "account-daily",
         accountName: "日常账户 / 消费清算",
+        accounts: [{ id: "account-daily", name: "日常账户" }, { id: "account-clearing", name: "消费清算" }],
         amount: -38,
         category: "餐饮",
         date: "2026-09-04",
@@ -259,8 +260,10 @@ describe("Finance View adapters", () => {
       {
         accountId: "account-savings",
         accountName: "储蓄账户",
-        amount: -1000,
-        category: "转账",
+        accounts: [{ id: "account-savings", name: "储蓄账户" }],
+        transfer: { purpose: null, legacy: true, currency: null, lines: expect.any(Array) },
+        amount: null,
+        category: "转账 · 历史格式",
         date: "2026-09-03",
         icon: "bank",
         id: "entry-transfer",

@@ -26,7 +26,14 @@ export interface Transaction {
   category: string;
   accountId: string;
   accountName: string;
-  amount: number;
+  amount: number | null;
+  accounts?: Array<{ id: string; name: string }>;
+  transfer?: {
+    purpose: import("@/lib/finance/transfer-types").TransferPurpose | null;
+    legacy: boolean;
+    currency?: string | null;
+    lines?: Array<{ id: string; accountName: string; amount: number; currency: string | null; memo: string | null }>;
+  };
   icon: TransactionIcon;
   editable: boolean;
   excludedFromBudget: boolean;

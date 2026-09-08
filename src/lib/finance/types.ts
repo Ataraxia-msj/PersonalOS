@@ -1,4 +1,5 @@
 import type { BalanceSnapshotRow, ReconciliationPreviewRow, ReconciliationResult, ReconciliationSaveArgs } from "./reconciliation-types";
+import type { TransferArgs, TransferPurpose, TransferResult } from "./transfer-types";
 
 export type AccountClass = "asset" | "liability";
 
@@ -96,6 +97,8 @@ export interface MonthlyFinancialSummaryView {
 }
 
 export interface TransactionDetailView {
+  // Absent only on pre-migration deployments; never infer a legacy transfer's purpose.
+  transfer_purpose?: TransferPurpose | null;
   saved_budget_bucket_id: string | null;
   saved_budget_bucket_name: string | null;
   entry_id: string;
@@ -126,6 +129,7 @@ export interface TransactionDetailView {
 }
 
 export interface JournalEntryRow {
+  transfer_purpose?: TransferPurpose | null;
   id: string;
   occurred_at: string;
   entry_type: TransactionEntryType;
@@ -232,6 +236,7 @@ export interface Database {
       vw_transaction_details: ViewDefinition<TransactionDetailView>;
     };
     Functions: {
+      create_transfer_transaction: { Args: TransferArgs; Returns: TransferResult[] };
       preview_balance_reconciliation: { Args: { p_account_id: string; p_snapshot_at: string }; Returns: ReconciliationPreviewRow[] };
       reconcile_account_balance: { Args: ReconciliationSaveArgs; Returns: ReconciliationResult[] };
       save_monthly_budget: { Args: SaveMonthlyBudgetArgs; Returns: SaveMonthlyBudgetRow[] };
