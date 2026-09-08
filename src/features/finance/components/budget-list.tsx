@@ -13,6 +13,7 @@ import {
   IconTrendingUp,
 } from "@tabler/icons-react";
 import { useState, type CSSProperties, type ComponentType } from "react";
+import Link from "next/link";
 
 import { formatCurrency } from "../format";
 import type { BudgetMonth } from "../types";
@@ -21,6 +22,7 @@ import styles from "./finance.module.css";
 
 interface BudgetListProps {
   months: BudgetMonth[];
+  selectedPeriod?: string;
 }
 
 const categoryIcons: Record<string, ComponentType<{ size?: number; stroke?: number }>> = {
@@ -50,12 +52,12 @@ function formatRemainingAmount(value: number) {
   return value < 0 ? `-${formatCurrency(value)}` : formatCurrency(value);
 }
 
-export function BudgetList({ months }: BudgetListProps) {
-  const [selectedId, setSelectedId] = useState(months[0]?.id ?? "");
+export function BudgetList({ months, selectedPeriod }: BudgetListProps) {
+  const [selectedId, setSelectedId] = useState(selectedPeriod ?? months[0]?.id ?? "");
   const selectedMonth = months.find((month) => month.id === selectedId) ?? months[0];
 
   if (!selectedMonth) {
-    return <p className={styles.emptyState}>暂无预算数据</p>;
+    return <section><p className={styles.emptyState}>暂无预算数据</p><Link className={styles.expenseBackLink} href="/finance/budget/new">创建预算</Link></section>;
   }
 
   const summary = getMonthSummary(selectedMonth);
@@ -65,6 +67,7 @@ export function BudgetList({ months }: BudgetListProps) {
       <aside className={styles.budgetMonthRail}>
         <div className={styles.budgetRailHeading}>
           <h2>预算月份</h2>
+          <Link href="/finance/budget/new" className={styles.expenseBackLink}>＋ 创建预算</Link>
         </div>
         <div className={styles.budgetMonthList}>
           {months.map((month) => {
@@ -82,7 +85,7 @@ export function BudgetList({ months }: BudgetListProps) {
                 <span className={styles.budgetMonthTopline}>
                   <strong>{month.label}</strong>
                   {month.editable ? (
-                    <span className={styles.editableLabel}>可编辑</span>
+                    <span className={styles.editableLabel}>可调整</span>
                   ) : (
                     <span className={styles.readOnlyLabel}><IconLock size={12} stroke={1.7} />只读</span>
                   )}
@@ -97,14 +100,14 @@ export function BudgetList({ months }: BudgetListProps) {
       <div className={styles.budgetDetail}>
         <header className={styles.budgetDetailHeader}>
           <div>
-            <h2 id="budget-title">{selectedMonth.editable ? "本月预算" : `${selectedMonth.label}预算`}</h2>
-            <p>{selectedMonth.editable ? `${selectedMonth.label} · 按分类追踪预算执行` : "历史预算记录，仅供查看"}</p>
+            <h2 id="budget-title">{selectedMonth.label}预算</h2>
+            <p>{selectedMonth.editable ? "按分类追踪预算执行" : selectedMonth.status === "draft" ? "旧草稿待单独处理，仅供查看" : "历史预算记录，仅供查看"}</p>
           </div>
           {selectedMonth.editable ? (
-            <button aria-label="调整预算" className={styles.adjustBudgetButton} type="button">
+            <Link aria-label="调整预算" className={styles.adjustBudgetButton} href={`/finance/budget/${selectedMonth.id}/edit`}>
               <IconPencil size={15} stroke={1.7} />
               调整预算
-            </button>
+            </Link>
           ) : (
             <span className={styles.historicalNotice}><IconLock size={14} stroke={1.7} />历史预算 · 只读</span>
           )}

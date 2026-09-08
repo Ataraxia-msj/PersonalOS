@@ -94,6 +94,8 @@ export interface MonthlyFinancialSummaryView {
 }
 
 export interface TransactionDetailView {
+  saved_budget_bucket_id: string | null;
+  saved_budget_bucket_name: string | null;
   entry_id: string;
   occurred_at: string;
   entry_type: TransactionEntryType;
@@ -166,6 +168,7 @@ export type ExpenseBudgetWarningCode =
   | "no_budget_period"
   | "no_budget_bucket"
   | "budget_period_closed"
+  | "budget_currency_mismatch"
   | "budget_period_closed_preserved";
 
 export type CreateExpenseTransactionArgs = {
@@ -211,6 +214,9 @@ type TableDefinition<Row> = {
 export interface Database {
   public: {
     Tables: {
+      budget_buckets: TableDefinition<BudgetBucketRow>;
+      budget_periods: TableDefinition<BudgetPeriodRow>;
+      budget_allocations: TableDefinition<BudgetAllocationRow>;
       budget_impacts: TableDefinition<BudgetImpactRow>;
       categories: TableDefinition<ExpenseCategoryRow>;
       journal_entries: TableDefinition<JournalEntryRow>;
@@ -223,6 +229,7 @@ export interface Database {
       vw_transaction_details: ViewDefinition<TransactionDetailView>;
     };
     Functions: {
+      save_monthly_budget: { Args: SaveMonthlyBudgetArgs; Returns: SaveMonthlyBudgetRow[] };
       create_expense_transaction: {
         Args: CreateExpenseTransactionArgs;
         Returns: CreateExpenseTransactionRow[];
@@ -235,4 +242,52 @@ export interface Database {
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };
+}
+
+export interface BudgetBucketRow {
+  id: string;
+  name: string;
+  bucket_kind: BudgetBucketKind;
+  sort_order: number;
+  is_active: boolean;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+export interface BudgetPeriodRow {
+  id: string;
+  start_date: string;
+  end_date: string;
+  planned_income: number;
+  currency: string;
+  status: BudgetPeriodStatus;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+export interface BudgetAllocationRow {
+  id: string;
+  budget_period_id: string;
+  budget_bucket_id: string;
+  planned_amount: number;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+export type SaveMonthlyBudgetArgs = {
+  p_month: string;
+  p_planned_income: number;
+  p_allocations: Array<{ budget_bucket_id: string; planned_amount: number }>;
+  p_period_id: string | null;
+  p_expected_updated_at: string | null;
+};
+export interface SaveMonthlyBudgetRow {
+  budget_period_id: string;
+  period_status: "active";
+  period_updated_at: string;
+  planned_total_allocated: number;
+  planned_unallocated: number;
+  backfilled_count: number;
+  pending_transaction_count: number;
+  warning_codes: string[];
 }

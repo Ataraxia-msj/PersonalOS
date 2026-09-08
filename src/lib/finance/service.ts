@@ -1,6 +1,7 @@
 import type {
   Account,
   BudgetMonth,
+  BudgetFormData,
   CategorySpending,
   ExpenseTransactionFormData,
   ExpenseTransactionEditData,
@@ -20,6 +21,10 @@ import {
 } from "./adapters";
 import {
   getAccountBalances,
+  getBudgetBuckets,
+  getBudgetPeriods,
+  getBudgetAllocations,
+  getBudgetSummaries,
   getActiveMonthlySummary,
   getBudgetExecutionHistory,
   getExpenseCategories,
@@ -29,6 +34,7 @@ import {
   getRecentTransactions,
   getTransactions,
 } from "./queries";
+import { shanghaiDate } from "./budget-validation";
 
 export async function getFinanceOverviewData(): Promise<FinanceOverviewData> {
   const client = await createClient();
@@ -58,11 +64,21 @@ export async function getAccountsPageData(): Promise<Account[]> {
 
 export async function getBudgetPageData(): Promise<BudgetMonth[]> {
   const client = await createClient();
-  const [execution, summaries] = await Promise.all([
+  const [execution, summaries, periods] = await Promise.all([
     getBudgetExecutionHistory(client),
-    getMonthlyFinancialSummaries(client),
+    getBudgetSummaries(client),
+    getBudgetPeriods(client),
   ]);
-  return adaptBudgetMonths(execution, summaries);
+  const months = adaptBudgetMonths(execution, summaries);
+  for (const period of periods) {
+    if (months.some((month) => month.id === period.id)) continue;
+    const summary = summaries.find((row) => row.budget_period_id === period.id);
+    months.push({ id: period.id, label: `${period.start_date.slice(0, 4)}年${Number(period.start_date.slice(5, 7))}月`,
+      status: period.status, editable: period.status === "active", sections: [], executionRate: null,
+      plannedTotal: summary?.planned_total_allocated ?? 0, actualTotal: 0, remainingTotal: summary?.planned_total_allocated ?? 0 });
+  }
+  const order = new Map(periods.map((period, index) => [period.id, index]));
+  return months.toSorted((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
 }
 
 export async function getTransactionsPageData(): Promise<{
@@ -79,12 +95,13 @@ export async function getAnalysisPageData(): Promise<CategorySpending[]> {
 
 export async function getExpenseTransactionFormData(): Promise<ExpenseTransactionFormData> {
   const client = await createClient();
-  const [accounts, categories, budgetRows] = await Promise.all([
+  const [accounts, categories, budgetRows, buckets] = await Promise.all([
     getAccountBalances(client),
     getExpenseCategories(client),
     getBudgetExecutionHistory(client),
+    getBudgetBuckets(client),
   ]);
-  return adaptExpenseTransactionFormData(accounts, categories, budgetRows);
+  return adaptExpenseTransactionFormData(accounts, categories, budgetRows, buckets);
 }
 
 function formatShanghaiDateTimeLocal(value: string) {
@@ -106,11 +123,12 @@ export async function getExpenseTransactionEditData(
   entryId: string,
 ): Promise<ExpenseTransactionEditData | null> {
   const client = await createClient();
-  const [editRows, accounts, categories, budgetRows] = await Promise.all([
+  const [editRows, accounts, categories, budgetRows, buckets] = await Promise.all([
     getExpenseTransactionForEdit(client, entryId),
     getAccountBalances(client),
     getExpenseCategories(client),
     getBudgetExecutionHistory(client),
+    getBudgetBuckets(client),
   ]);
   const [transaction] = adaptTransactions(editRows.transactionLines);
   const primaryLine = editRows.transactionLines.toSorted(
@@ -127,11 +145,11 @@ export async function getExpenseTransactionEditData(
     : null;
 
   return {
-    formData: adaptExpenseTransactionFormData(accounts, categories, budgetRows),
+    formData: adaptExpenseTransactionFormData(accounts, categories, budgetRows, buckets),
     initialValues: {
       accountId: primaryLine.account_id,
       amount: Math.abs(primaryLine.amount),
-      budgetBucketId: impact?.budget_bucket_id ?? "",
+      budgetBucketId: primaryLine.saved_budget_bucket_id ?? impact?.budget_bucket_id ?? "",
       budgetLocked: impactPeriod?.period_status === "closed",
       categoryId: primaryLine.category_id ?? "",
       description: primaryLine.description,
@@ -139,5 +157,25 @@ export async function getExpenseTransactionEditData(
       excludeFromBudget: primaryLine.exclude_from_budget,
       occurredAt: formatShanghaiDateTimeLocal(primaryLine.occurred_at),
     },
+  };
+}
+
+export async function getBudgetFormData(periodId?: string): Promise<BudgetFormData | null> {
+  const client = await createClient();
+  const [periods, buckets, allocations] = await Promise.all([
+    getBudgetPeriods(client), getBudgetBuckets(client),
+    periodId ? getBudgetAllocations(client, periodId) : Promise.resolve([]),
+  ]);
+  const period = periodId ? periods.find((item) => item.id === periodId) : null;
+  if (periodId && !period) return null;
+  const amountByBucket = new Map(allocations.map((row) => [row.budget_bucket_id, row.planned_amount]));
+  return {
+    defaultMonth: shanghaiDate().slice(0, 7),
+    period: period ? { id: period.id, month: period.start_date.slice(0, 7), income: period.planned_income,
+      updatedAt: period.updated_at, status: period.status, currency: period.currency } : null,
+    periods: periods.map((row) => ({ id: row.id, startDate: row.start_date, endDate: row.end_date })),
+    buckets: buckets.filter((row) => row.is_active || amountByBucket.has(row.id)).map((row) => ({
+      id: row.id, name: row.name, kind: row.bucket_kind, active: row.is_active, amount: amountByBucket.get(row.id) ?? null,
+    })),
   };
 }

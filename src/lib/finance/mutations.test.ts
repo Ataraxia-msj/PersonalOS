@@ -7,6 +7,10 @@ import {
   updateExpenseTransaction,
 } from "./mutations";
 
+function readyClient(rpc: unknown) {
+  return { rpc, from: () => ({ select: () => ({ limit: async () => ({ error: null }) }) }) } as unknown as FinanceMutationClient;
+}
+
 const input = {
   accountId: "account-daily",
   amount: 18.5,
@@ -20,6 +24,13 @@ const input = {
 };
 
 describe("Finance mutations", () => {
+  it("does not submit to an old expense RPC that cannot persist the chosen bucket", async () => {
+    const rpc = vi.fn();
+    const client = { rpc, from: () => ({ select: () => ({ limit: async () => ({ error: { message: "column missing" } }) }) }) } as unknown as FinanceMutationClient;
+    await expect(createExpenseTransaction(client, input)).rejects.toThrow("数据库迁移");
+    await expect(updateExpenseTransaction(client, { ...input, entryId: "entry" })).rejects.toThrow("数据库迁移");
+    expect(rpc).not.toHaveBeenCalled();
+  });
   it("calls the expense RPC once with the exact database parameter names", async () => {
     const rpc = vi.fn().mockResolvedValue({
       data: [{
@@ -34,7 +45,7 @@ describe("Finance mutations", () => {
       error: null,
     });
 
-    await expect(createExpenseTransaction({ rpc } as unknown as FinanceMutationClient, input))
+    await expect(createExpenseTransaction(readyClient(rpc), input))
       .resolves.toEqual({
         budgetBucketId: "bucket-food",
         budgetImpactCreated: true,
@@ -74,7 +85,7 @@ describe("Finance mutations", () => {
     });
 
     const result = await createExpenseTransaction(
-      { rpc } as unknown as FinanceMutationClient,
+      readyClient(rpc),
       { ...input, budgetBucketId: null },
     );
 
@@ -97,7 +108,7 @@ describe("Finance mutations", () => {
     });
 
     await expect(updateExpenseTransaction(
-      { rpc } as unknown as FinanceMutationClient,
+      readyClient(rpc),
       { ...input, entryId: "entry-lunch", excludeFromBudget: true },
     )).resolves.toMatchObject({
       budgetExcluded: true,
@@ -125,7 +136,7 @@ describe("Finance mutations", () => {
     });
 
     await expect(createExpenseTransaction(
-      { rpc } as unknown as FinanceMutationClient,
+      readyClient(rpc),
       input,
     )).rejects.toEqual(new FinanceMutationError(
       "budget_bucket_not_allocated_to_period",

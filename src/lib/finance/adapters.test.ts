@@ -34,6 +34,8 @@ const transactionLine = (
   category_id: "category-food",
   category_name: "餐饮",
   category_type: "expense",
+  saved_budget_bucket_id: null,
+  saved_budget_bucket_name: null,
   budget_bucket_id: null,
   budget_bucket_name: null,
   budget_period_end_date: null,
@@ -103,6 +105,12 @@ const bucket = (name: string, kind: BudgetExecutionView["bucket_kind"], order: n
 });
 
 describe("Finance View adapters", () => {
+  it("shows independently saved classification before a monthly budget exists", () => {
+    const [transaction] = adaptTransactions([transactionLine({
+      saved_budget_bucket_id: "saved-bucket", saved_budget_bucket_name: "变动必要开销",
+    })]);
+    expect(transaction.budgetLabel).toBe("变动必要开销 · 未计入预算");
+  });
   it("uses the View's total assets without rebuilding net worth", () => {
     const row: NetWorthView = {
       currency: "CNY",
@@ -246,7 +254,7 @@ describe("Finance View adapters", () => {
         merchant: "午餐",
         editable: false,
         excludedFromBudget: false,
-        budgetLabel: "未归入预算",
+        budgetLabel: "预算归属待补充",
       },
       {
         accountId: "account-savings",
@@ -259,7 +267,7 @@ describe("Finance View adapters", () => {
         merchant: "转入储蓄",
         editable: false,
         excludedFromBudget: false,
-        budgetLabel: "未归入预算",
+        budgetLabel: "—",
       },
     ]);
   });
@@ -314,7 +322,7 @@ describe("Finance View adapters", () => {
 
     expect(budgeted.budgetLabel).toBe("2026年9月 · 自由消费");
     expect(excluded.budgetLabel).toBe("不计入预算");
-    expect(unassigned.budgetLabel).toBe("未归入预算");
+    expect(unassigned.budgetLabel).toBe("预算归属待补充");
   });
 
   it("builds real form options and groups budget buckets by period", () => {
@@ -359,6 +367,7 @@ describe("Finance View adapters", () => {
         institution: "招商银行",
         name: "日常账户",
       }],
+      budgetBuckets: [],
       budgetPeriods: [{
         buckets: [
           { id: "bucket-0", kind: "expense", name: "固定必要开销" },

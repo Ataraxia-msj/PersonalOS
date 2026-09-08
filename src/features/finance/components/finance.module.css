@@ -540,6 +540,11 @@
   padding-top: 28px;
 }
 
+.budgetFormSection { margin-top: 32px; }
+.budgetFormSection h3 { color: var(--text-primary); font-size: 16px; margin-bottom: 18px; }
+.budgetPlanTotals { display: flex; flex-wrap: wrap; gap: 24px; margin: 28px 0; }
+.budgetPlanTotals strong { margin-left: 12px; }
+
 .expenseFormGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -5,6 +5,8 @@ import {
   getActiveBudgetExecution,
   getActiveMonthlySummary,
   getBudgetExecutionHistory,
+  getBudgetBuckets,
+  getBudgetPeriods,
   getExpenseCategories,
   getExpenseTransactionForEdit,
   getMonthlyFinancialSummaries,
@@ -17,6 +19,9 @@ import {
 function createQueryDouble(result: { data: unknown; error: unknown }) {
   const calls: Array<[string, ...unknown[]]> = [];
   const chain = {
+    lte: vi.fn((...args: unknown[]) => { calls.push(["lte", ...args]); return chain; }),
+    gte: vi.fn((...args: unknown[]) => { calls.push(["gte", ...args]); return chain; }),
+    range: vi.fn((...args: unknown[]) => { calls.push(["range", ...args]); return chain; }),
     eq: vi.fn((...args: unknown[]) => { calls.push(["eq", ...args]); return chain; }),
     limit: vi.fn((...args: unknown[]) => { calls.push(["limit", ...args]); return chain; }),
     maybeSingle: vi.fn(async () => result),
@@ -35,6 +40,38 @@ describe("Finance View queries", () => {
     await expect(getNetWorth(query.client)).resolves.toEqual({ net_worth: 100 });
     expect(query.from).toHaveBeenCalledWith("vw_net_worth");
     expect(query.calls).toContainEqual(["select", "*"]);
+  });
+
+  it("limits current metrics to the supplied Shanghai business date, not a future active month", async () => {
+    for (const read of [getActiveMonthlySummary, getActiveBudgetExecution]) {
+      const query = createQueryDouble({ data: [], error: null });
+      await read(query.client, "2026-09-30");
+      expect(query.calls).toContainEqual(["lte", "start_date", "2026-09-30"]);
+      expect(query.calls).toContainEqual(["gte", "end_date", "2026-09-30"]);
+    }
+  });
+
+  it("reads independent real buckets and checks the attribution migration before form writes", async () => {
+    const query = createQueryDouble({ data: [], error: null });
+    await expect(getBudgetBuckets(query.client)).resolves.toEqual([]);
+    expect(query.from).toHaveBeenCalledWith("budget_buckets");
+    expect(query.calls).toContainEqual(["select", "saved_budget_bucket_id"]);
+    expect(query.calls).toContainEqual(["range", 0, 499]);
+    const outdated = createQueryDouble({ data: null, error: { message: "column missing" } });
+    await expect(getBudgetBuckets(outdated.client)).rejects.toThrow("数据库迁移");
+    expect(outdated.from).not.toHaveBeenCalledWith("budget_buckets");
+  });
+
+  it("continues reading budget history past the first page", async () => {
+    const first = Array.from({ length: 500 }, (_, index) => ({ id: `period-${index}` }));
+    const range = vi.fn().mockImplementation(async (start: number) => ({
+      data: start === 0 ? first : [{ id: "period-500" }], error: null,
+    }));
+    const chain = { select: () => chain, order: () => chain, range };
+    const client = { from: () => chain } as unknown as FinanceQueryClient;
+    const rows = await getBudgetPeriods(client);
+    expect(rows).toHaveLength(501);
+    expect(range.mock.calls).toEqual([[0, 499], [500, 999]]);
   });
 
   it("reads only active accounts in database sort order", async () => {

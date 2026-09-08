@@ -25,6 +25,7 @@ const months: BudgetMonth[] = [
   {
     actualTotal: 3600,
     editable: true,
+    status: "active",
     executionRate: null,
     id: "period-2026-09",
     label: "2026年9月",
@@ -59,6 +60,7 @@ const months: BudgetMonth[] = [
   {
     actualTotal: 3000,
     editable: false,
+    status: "closed",
     executionRate: null,
     id: "period-2026-08",
     label: "2026年8月",
@@ -75,7 +77,7 @@ describe("BudgetPage", () => {
   beforeEach(() => vi.mocked(getBudgetPageData).mockResolvedValue(months));
 
   it("renders six real budget buckets in two sections and no invented overall rate", async () => {
-    render(await BudgetPage());
+    render(await BudgetPage({}));
 
     expect(screen.getByRole("heading", { name: "消费预算" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "资金安排" })).toBeVisible();
@@ -87,17 +89,17 @@ describe("BudgetPage", () => {
 
   it("switches a previous month into a read-only budget view", async () => {
     const user = userEvent.setup();
-    render(await BudgetPage());
+    render(await BudgetPage({}));
 
     await user.click(screen.getByRole("button", { name: /2026年8月/ }));
 
     expect(screen.getByRole("heading", { name: "2026年8月预算" })).toBeVisible();
     expect(screen.getAllByText("只读").length).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: "调整预算" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "调整预算" })).not.toBeInTheDocument();
   });
 
   it("treats the View execution rate as an already-scaled percentage", async () => {
-    render(await BudgetPage());
+    render(await BudgetPage({}));
 
     expect(screen.getByText("0.45%")).toBeVisible();
     expect(screen.getByRole("progressbar", {

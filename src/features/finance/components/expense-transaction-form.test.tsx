@@ -9,6 +9,10 @@ import {
 } from "./expense-transaction-form";
 
 const data: ExpenseTransactionFormData = {
+  budgetBuckets: [
+    { id: "bucket-fixed", kind: "expense", name: "固定必要开销" },
+    { id: "bucket-free", kind: "expense", name: "自由消费" },
+  ],
   accounts: [{
     accountClass: "asset",
     balance: 1288,
@@ -78,8 +82,21 @@ describe("ExpenseTransactionForm", () => {
     await user.clear(occurredAt);
     await user.type(occurredAt, "2026-10-04T12:30");
 
-    expect(screen.getByText("该日期没有预算月份；交易仍会记账，但不会计入预算。")).toBeVisible();
-    expect(screen.getByLabelText("预算分类")).toBeDisabled();
+    expect(screen.getByLabelText("预算分类")).toBeEnabled();
+    await user.selectOptions(screen.getByLabelText("预算分类"), "bucket-free");
+    expect(screen.getByLabelText("预算分类")).toHaveValue("bucket-free");
+    expect(screen.getByText(/建立该月预算后自动计入/)).toBeVisible();
+  });
+
+  it("keeps a saved choice when changing to a month with no period", async () => {
+    const user = userEvent.setup();
+    render(<ExpenseTransactionForm action={vi.fn() as ExpenseTransactionFormAction}
+      data={data} initialValues={{ ...initialValues, excludeFromBudget: false }} mode="edit" />);
+    const date = screen.getByLabelText("日期 / 时间");
+    await user.clear(date);
+    await user.type(date, "2026-11-01T09:30");
+    expect(screen.getByLabelText("预算分类")).toHaveValue("bucket-free");
+    expect(screen.getByLabelText("预算分类")).toBeEnabled();
   });
 
   it("lets the user explicitly exclude a real expense from budget execution", async () => {

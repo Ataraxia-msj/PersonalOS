@@ -121,6 +121,17 @@ describe("createExpenseTransactionAction", () => {
     expect(result).toMatchObject({ entryId: "entry-publishing", status: "success" });
   });
 
+  it("clearly warns when a recorded expense cannot enter a different-currency budget", async () => {
+    vi.mocked(createExpenseTransaction).mockResolvedValue({
+      budgetBucketId: "bucket", budgetExcluded: false, budgetImpactCreated: false,
+      budgetPeriodId: "period", entryId: "entry", lineId: "line",
+      warningCode: "budget_currency_mismatch",
+    });
+    const result = await createExpenseTransactionAction(initialExpenseTransactionActionState, validFormData());
+    expect(result.status).toBe("warning");
+    expect(result.message).toContain("币种不一致");
+  });
+
   it("rejects an unauthenticated action without calling the RPC", async () => {
     getClaims.mockResolvedValue({ data: null, error: null } as never);
 

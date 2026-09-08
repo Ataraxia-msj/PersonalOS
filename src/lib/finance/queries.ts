@@ -2,6 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
   AccountBalanceView,
+  BudgetBucketRow,
+  BudgetPeriodRow,
+  BudgetAllocationRow,
   BudgetExecutionView,
   BudgetImpactRow,
   Database,
@@ -10,6 +13,7 @@ import type {
   NetWorthView,
   TransactionDetailView,
 } from "./types";
+import { shanghaiDate } from "./budget-validation";
 
 export type FinanceQueryClient = SupabaseClient<Database>;
 
@@ -50,11 +54,14 @@ export async function getExpenseCategories(
 
 export async function getActiveBudgetExecution(
   client: FinanceQueryClient,
+  date = shanghaiDate(),
 ): Promise<BudgetExecutionView[]> {
   const { data, error } = await client
     .from("vw_budget_execution")
     .select("*")
     .eq("period_status", "active")
+    .lte("start_date", date)
+    .gte("end_date", date)
     .order("sort_order", { ascending: true });
   return readResult("vw_budget_execution", data ?? [], error);
 }
@@ -62,25 +69,63 @@ export async function getActiveBudgetExecution(
 export async function getBudgetExecutionHistory(
   client: FinanceQueryClient,
 ): Promise<BudgetExecutionView[]> {
-  const { data, error } = await client
+  return readPages<BudgetExecutionView>("vw_budget_execution", (start, end) => client
     .from("vw_budget_execution")
     .select("*")
     .order("start_date", { ascending: false })
-    .order("sort_order", { ascending: true });
-  return readResult("vw_budget_execution", data ?? [], error);
+    .order("sort_order", { ascending: true })
+    .order("budget_bucket_id", { ascending: true }).range(start, end));
 }
 
 export async function getActiveMonthlySummary(
   client: FinanceQueryClient,
+  date = shanghaiDate(),
 ): Promise<MonthlyFinancialSummaryView | null> {
   const { data, error } = await client
     .from("vw_monthly_financial_summary")
     .select("*")
     .eq("status", "active")
+    .lte("start_date", date)
+    .gte("end_date", date)
     .order("start_date", { ascending: false })
     .limit(1)
     .maybeSingle();
   return readResult("vw_monthly_financial_summary", data, error);
+}
+
+async function readPages<T>(table: string, fetchPage: (start: number, end: number) => PromiseLike<{
+  data: T[] | null; error: { message: string } | null;
+}>): Promise<T[]> {
+  const rows: T[] = [];
+  for (let start = 0; ; start += 500) {
+    const { data, error } = await fetchPage(start, start + 499);
+    const page = readResult(table, data ?? [], error);
+    rows.push(...page);
+    if (page.length < 500) return rows;
+  }
+}
+
+export async function getBudgetBuckets(client: FinanceQueryClient): Promise<BudgetBucketRow[]> {
+  await assertBudgetAttributionSchema(client);
+  return readPages("budget_buckets", (start, end) => client.from("budget_buckets")
+    .select("*").order("sort_order").order("id").range(start, end));
+}
+
+export async function assertBudgetAttributionSchema(client: FinanceQueryClient): Promise<void> {
+  const { error } = await client.from("vw_transaction_details").select("saved_budget_bucket_id").limit(0);
+  if (error) throw new Error("预算归属读取不可用，请确认数据库迁移已部署且当前用户有读取权限。");
+}
+export async function getBudgetPeriods(client: FinanceQueryClient): Promise<BudgetPeriodRow[]> {
+  return readPages("budget_periods", (start, end) => client.from("budget_periods")
+    .select("*").order("start_date", { ascending: false }).order("id").range(start, end));
+}
+export async function getBudgetAllocations(client: FinanceQueryClient, periodId: string): Promise<BudgetAllocationRow[]> {
+  return readPages("budget_allocations", (start, end) => client.from("budget_allocations")
+    .select("*").eq("budget_period_id", periodId).order("id").range(start, end));
+}
+export async function getBudgetSummaries(client: FinanceQueryClient): Promise<MonthlyFinancialSummaryView[]> {
+  return readPages("vw_monthly_financial_summary", (start, end) => client.from("vw_monthly_financial_summary")
+    .select("*").order("start_date", { ascending: false }).order("budget_period_id").range(start, end));
 }
 
 export async function getMonthlyFinancialSummaries(

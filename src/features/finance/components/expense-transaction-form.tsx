@@ -66,27 +66,15 @@ export function ExpenseTransactionForm({
   );
   const period = matchingPeriods.length === 1 ? matchingPeriods[0] : null;
   const category = data.categories.find((item) => item.id === categoryId) ?? null;
-  const defaultBucket = period?.buckets.find(
+  const defaultBucket = data.budgetBuckets.find(
     (bucket) => bucket.id === category?.defaultBudgetBucketId,
   ) ?? null;
   const budgetDisabled = budgetLocked
     || excludeFromBudget
-    || !period
-    || period.status === "closed"
-    || period.buckets.length === 0;
+    || data.budgetBuckets.length === 0;
   const formDisabled = data.accounts.length === 0 || data.categories.length === 0;
 
   function handleOccurredAtChange(value: string) {
-    const date = value.slice(0, 10);
-    const nextPeriods = data.budgetPeriods.filter(
-      (item) => item.startDate <= date && date <= item.endDate,
-    );
-    const nextBuckets = nextPeriods.length === 1 && nextPeriods[0]?.status !== "closed"
-      ? nextPeriods[0]?.buckets ?? []
-      : [];
-    if (!nextBuckets.some((bucket) => bucket.id === budgetBucketId)) {
-      setBudgetBucketId("");
-    }
     setOccurredAt(value);
   }
 
@@ -196,17 +184,21 @@ export function ExpenseTransactionForm({
             <select
               aria-label="预算分类"
               disabled={budgetDisabled}
-              name="budgetBucketId"
               onChange={(event) => setBudgetBucketId(event.target.value)}
               value={budgetBucketId}
             >
               <option value="">
                 {defaultBucket ? `自动 · ${defaultBucket.name}` : "自动使用分类默认值"}
               </option>
-              {period?.buckets.map((bucket) => (
+              {budgetBucketId && !data.budgetBuckets.some((bucket) => bucket.id === budgetBucketId) ? (
+                <option value={budgetBucketId}>原预算分类（已停用）</option>
+              ) : null}
+              {data.budgetBuckets.map((bucket) => (
                 <option key={bucket.id} value={bucket.id}>{bucket.name}</option>
               ))}
             </select>
+            <input type="hidden" name="budgetBucketId"
+              value={excludeFromBudget ? "" : budgetBucketId || defaultBucket?.id || ""} />
             {budgetLocked ? (
               <small>该月份预算已关闭；可以修改交易事实，但原预算记录保持不变。</small>
             ) : excludeFromBudget ? (
@@ -214,7 +206,7 @@ export function ExpenseTransactionForm({
             ) : matchingPeriods.length > 1 ? (
               <small className={styles.expenseFieldError}>该日期匹配到多个预算月份，提交会被拒绝。</small>
             ) : !period ? (
-              <small>该日期没有预算月份；交易仍会记账，但不会计入预算。</small>
+              <small>该日期尚未建立预算；所选归属会保存，建立该月预算后自动计入。</small>
             ) : period.status === "closed" ? (
               <small>该预算月份已关闭；交易仍会记账，但不会修改预算。</small>
             ) : period.buckets.length === 0 ? (

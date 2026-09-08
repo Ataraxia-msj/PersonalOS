@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { assertBudgetAttributionSchema } from "./queries";
 
 import type {
   CreateExpenseTransactionArgs,
@@ -46,6 +47,7 @@ export async function createExpenseTransaction(
   client: FinanceMutationClient,
   input: CreateExpenseTransactionInput,
 ): Promise<CreateExpenseTransactionResult> {
+  await assertBudgetAttributionSchema(client);
   const args: CreateExpenseTransactionArgs = {
     p_account_id: input.accountId,
     p_amount: input.amount,
@@ -83,6 +85,7 @@ export async function updateExpenseTransaction(
   client: FinanceMutationClient,
   input: UpdateExpenseTransactionInput,
 ): Promise<CreateExpenseTransactionResult> {
+  await assertBudgetAttributionSchema(client);
   const args: UpdateExpenseTransactionArgs = {
     p_account_id: input.accountId,
     p_amount: input.amount,

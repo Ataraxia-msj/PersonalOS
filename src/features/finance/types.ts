@@ -52,6 +52,7 @@ export interface BudgetSection {
 }
 
 export interface BudgetMonth {
+  status: "draft" | "active" | "closed";
   id: string;
   label: string;
   editable: boolean;
@@ -127,9 +128,17 @@ export interface ExpenseBudgetPeriodOption {
 }
 
 export interface ExpenseTransactionFormData {
+  budgetBuckets: ExpenseBudgetBucketOption[];
   accounts: ExpenseAccountOption[];
   categories: ExpenseCategoryOption[];
   budgetPeriods: ExpenseBudgetPeriodOption[];
+}
+
+export interface BudgetFormData {
+  period: { id: string; month: string; income: number; updatedAt: string; status: "draft" | "active" | "closed"; currency: string } | null;
+  periods: Array<{ id: string; startDate: string; endDate: string }>;
+  buckets: Array<{ id: string; name: string; kind: ExpenseBudgetBucketOption["kind"]; active: boolean; amount: number | null }>;
+  defaultMonth: string;
 }
 
 export interface ExpenseTransactionInitialValues {

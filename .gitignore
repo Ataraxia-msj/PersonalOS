@@ -37,3 +37,7 @@ Thumbs.db
 /docs/superpowers/
 /.codex/
 /.agents/
+
+# Superseded local database review and rehearsal scripts
+/supabase/reviews/
+/supabase/checks/monthly_budget_rehearsal.sql

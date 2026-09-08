@@ -15,6 +15,7 @@ const localDateTimePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 const amountPattern = /^\d+(?:\.\d{1,2})?$/;
 
 const warningMessages: Record<ExpenseBudgetWarningCode, string> = {
+  budget_currency_mismatch: "交易和预算分类已修改，但账户与预算币种不一致，未计入预算。",
   budget_period_closed: "交易已修改，但对应预算月份已关闭，因此没有修改预算执行。",
   budget_period_closed_preserved: "交易已修改，但已关闭预算保持原记录不变。",
   no_budget_bucket: "交易已修改，但分类没有可用预算分类，因此没有计入预算。",
@@ -131,7 +132,9 @@ export async function updateExpenseTransactionAction(
       return {
         entryId: result.entryId,
         fieldErrors: {},
-        message: warningMessages[result.warningCode],
+        message: result.warningCode === "no_budget_period" && result.budgetBucketId
+          ? "交易和预算归属已保存，建立该月预算后自动计入。"
+          : warningMessages[result.warningCode],
         status: "warning",
       };
     }

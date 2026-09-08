@@ -11,6 +11,7 @@ import type {
 
 import type {
   AccountBalanceView,
+  BudgetBucketRow,
   BudgetExecutionView,
   ExpenseCategoryRow,
   MonthlyFinancialSummaryView,
@@ -114,7 +115,9 @@ export function adaptTransactions(rows: TransactionDetailView[]): Transaction[] 
         ? "不计入预算"
         : primaryLine.budget_period_start_date && primaryLine.budget_bucket_name
           ? `${formatMonth(primaryLine.budget_period_start_date)} · ${primaryLine.budget_bucket_name}`
-          : "未归入预算",
+          : primaryLine.saved_budget_bucket_name
+            ? `${primaryLine.saved_budget_bucket_name} · 未计入预算`
+            : primaryLine.entry_type === "expense" ? "预算归属待补充" : "—",
       icon,
       id: primaryLine.entry_id,
       merchant: primaryLine.description,
@@ -140,6 +143,7 @@ export function adaptExpenseTransactionFormData(
   accounts: AccountBalanceView[],
   categories: ExpenseCategoryRow[],
   budgetRows: BudgetExecutionView[],
+  buckets: BudgetBucketRow[] = [],
 ): ExpenseTransactionFormData {
   const periods = new Map<string, ExpenseTransactionFormData["budgetPeriods"][number]>();
 
@@ -160,6 +164,9 @@ export function adaptExpenseTransactionFormData(
   }
 
   return {
+    budgetBuckets: buckets.filter((bucket) => bucket.is_active).map((bucket) => ({
+      id: bucket.id, name: bucket.name, kind: bucket.bucket_kind,
+    })),
     accounts: accounts.map((account) => ({
       accountClass: account.account_class,
       balance: account.estimated_balance,
@@ -260,7 +267,8 @@ export function adaptBudgetMonths(
 
     return {
       actualTotal: orderedRows.reduce((total, row) => total + row.actual_amount, 0),
-      editable: first.period_status !== "closed",
+      editable: first.period_status === "active",
+      status: first.period_status,
       executionRate: null,
       id: periodId,
       label: formatMonth(first.start_date),

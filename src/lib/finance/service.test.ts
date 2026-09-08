@@ -7,6 +7,10 @@ import {
   getActiveBudgetExecution,
   getActiveMonthlySummary,
   getBudgetExecutionHistory,
+  getBudgetBuckets,
+  getBudgetPeriods,
+  getBudgetSummaries,
+  getBudgetAllocations,
   getExpenseCategories,
   getExpenseTransactionForEdit,
   getMonthlyFinancialSummaries,
@@ -19,6 +23,7 @@ import {
   getAccountsPageData,
   getAnalysisPageData,
   getBudgetPageData,
+  getBudgetFormData,
   getFinanceOverviewData,
   getExpenseTransactionFormData,
   getExpenseTransactionEditData,
@@ -31,6 +36,10 @@ vi.mock("./queries", () => ({
   getActiveBudgetExecution: vi.fn(),
   getActiveMonthlySummary: vi.fn(),
   getBudgetExecutionHistory: vi.fn(),
+  getBudgetBuckets: vi.fn(),
+  getBudgetPeriods: vi.fn(),
+  getBudgetSummaries: vi.fn(),
+  getBudgetAllocations: vi.fn(),
   getExpenseCategories: vi.fn(),
   getExpenseTransactionForEdit: vi.fn(),
   getMonthlyFinancialSummaries: vi.fn(),
@@ -51,6 +60,8 @@ const transactionLine = (
   category_id: "category-food",
   category_name: "餐饮",
   category_type: "expense",
+  saved_budget_bucket_id: null,
+  saved_budget_bucket_name: null,
   budget_bucket_id: null,
   budget_bucket_name: null,
   budget_period_end_date: null,
@@ -84,6 +95,10 @@ describe("Finance service", () => {
     vi.mocked(getAccountBalances).mockResolvedValue([]);
     vi.mocked(getActiveBudgetExecution).mockResolvedValue([]);
     vi.mocked(getBudgetExecutionHistory).mockResolvedValue([]);
+    vi.mocked(getBudgetBuckets).mockResolvedValue([]);
+    vi.mocked(getBudgetPeriods).mockResolvedValue([]);
+    vi.mocked(getBudgetSummaries).mockResolvedValue([]);
+    vi.mocked(getBudgetAllocations).mockResolvedValue([]);
     vi.mocked(getExpenseCategories).mockResolvedValue([]);
     vi.mocked(getExpenseTransactionForEdit).mockResolvedValue({
       budgetImpacts: [],
@@ -171,7 +186,8 @@ describe("Finance service", () => {
 
     expect(data).toEqual([]);
     expect(getBudgetExecutionHistory).toHaveBeenCalledWith(client);
-    expect(getMonthlyFinancialSummaries).toHaveBeenCalledWith(client);
+    expect(getBudgetSummaries).toHaveBeenCalledWith(client);
+    expect(getBudgetPeriods).toHaveBeenCalledWith(client);
   });
 
   it("builds analysis rows from the active monthly summary View", async () => {
@@ -217,6 +233,7 @@ describe("Finance service", () => {
     await expect(getExpenseTransactionFormData()).resolves.toEqual({
       accounts: [],
       budgetPeriods: [],
+      budgetBuckets: [],
       categories: [],
     });
 
@@ -272,5 +289,26 @@ describe("Finance service", () => {
         occurredAt: "2026-09-04T12:30",
       },
     });
+  });
+
+  it("restores the persisted transaction bucket when there is no period or impact", async () => {
+    vi.mocked(getExpenseTransactionForEdit).mockResolvedValue({ budgetImpacts: [], transactionLines: [transactionLine({
+      saved_budget_bucket_id: "chosen", saved_budget_bucket_name: "变动必要开销",
+    })] });
+    const result = await getExpenseTransactionEditData("entry-lunch");
+    expect(result?.initialValues.budgetBucketId).toBe("chosen");
+    expect(result?.initialValues.budgetLocked).toBe(false);
+  });
+
+  it("reads independent real bucket options for a new month without inventing allocations", async () => {
+    vi.mocked(getBudgetBuckets).mockResolvedValue([{
+      id: "bucket-real", name: "真实分类", bucket_kind: "expense", is_active: true, sort_order: 0,
+      note: null, created_at: "2026-09-01T00:00:00Z", updated_at: "2026-09-01T00:00:00Z",
+    }]);
+    const result = await getBudgetFormData();
+    expect(result?.period).toBeNull();
+    expect(result?.buckets).toEqual([{ id: "bucket-real", name: "真实分类", kind: "expense", active: true, amount: null }]);
+    expect(getBudgetAllocations).not.toHaveBeenCalled();
+    expect(createClient).toHaveBeenCalledOnce();
   });
 });
