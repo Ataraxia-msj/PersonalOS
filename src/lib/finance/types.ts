@@ -1,3 +1,5 @@
+import type { BalanceSnapshotRow, ReconciliationPreviewRow, ReconciliationResult, ReconciliationSaveArgs } from "./reconciliation-types";
+
 export type AccountClass = "asset" | "liability";
 
 export type AccountType =
@@ -214,6 +216,7 @@ type TableDefinition<Row> = {
 export interface Database {
   public: {
     Tables: {
+      balance_snapshots: TableDefinition<BalanceSnapshotRow>;
       budget_buckets: TableDefinition<BudgetBucketRow>;
       budget_periods: TableDefinition<BudgetPeriodRow>;
       budget_allocations: TableDefinition<BudgetAllocationRow>;
@@ -229,6 +232,8 @@ export interface Database {
       vw_transaction_details: ViewDefinition<TransactionDetailView>;
     };
     Functions: {
+      preview_balance_reconciliation: { Args: { p_account_id: string; p_snapshot_at: string }; Returns: ReconciliationPreviewRow[] };
+      reconcile_account_balance: { Args: ReconciliationSaveArgs; Returns: ReconciliationResult[] };
       save_monthly_budget: { Args: SaveMonthlyBudgetArgs; Returns: SaveMonthlyBudgetRow[] };
       create_expense_transaction: {
         Args: CreateExpenseTransactionArgs;

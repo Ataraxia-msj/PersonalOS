@@ -7,6 +7,8 @@ import {
 } from "@tabler/icons-react";
 
 import { formatCurrency } from "../format";
+import Link from "next/link";
+import calibration from "./reconciliation.module.css";
 import type { Account, AccountType } from "../types";
 import styles from "./finance.module.css";
 
@@ -50,9 +52,12 @@ export function AccountList({ accounts }: AccountListProps) {
                 <strong>{account.name}</strong>
                 <span>{account.institution} · {accountTypeLabels[account.type]}</span>
               </div>
-              <strong className={account.balance < 0 ? styles.negativeBalance : styles.accountBalance}>
-                {account.balance < 0 ? "-" : ""}{formatCurrency(account.balance, 2)}
-              </strong>
+              <div className={calibration.accountActions}>
+                <strong className={account.balance < 0 ? styles.negativeBalance : styles.accountBalance}>
+                  {account.balance < 0 ? "-" : ""}{formatCurrency(account.balance, 2)}
+                </strong>
+                <Link className={calibration.accountLink} href={`/finance/accounts/${account.id}/reconcile`} aria-label={`校准${account.name}余额`}>校准余额 / 历史</Link>
+              </div>
             </article>
           );
         })}
