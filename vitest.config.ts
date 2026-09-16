@@ -13,5 +13,8 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     css: true,
+    // Keep concurrent jsdom workers below the point where interaction tests
+    // starve and hit Vitest's per-test timeout on this project.
+    maxWorkers: 4,
   },
 });

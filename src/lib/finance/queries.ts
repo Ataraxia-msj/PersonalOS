@@ -59,6 +59,18 @@ export async function getExpenseCategories(
   return readResult("categories", data ?? [], error);
 }
 
+export async function getIncomeCategories(
+  client: FinanceQueryClient,
+): Promise<ExpenseCategoryRow[]> {
+  const { data, error } = await client
+    .from("categories")
+    .select("*")
+    .eq("category_type", "income")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+  return readResult("categories", data ?? [], error);
+}
+
 export async function getActiveBudgetExecution(
   client: FinanceQueryClient,
   date = shanghaiDate(),

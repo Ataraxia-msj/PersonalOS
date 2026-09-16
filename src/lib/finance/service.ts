@@ -4,6 +4,7 @@ import type {
   BudgetFormData,
   CategorySpending,
   ExpenseTransactionFormData,
+  IncomeTransactionFormData,
   ExpenseTransactionEditData,
   FinanceOverviewData,
   Transaction,
@@ -14,6 +15,7 @@ import {
   adaptAccountBalances,
   adaptBudgetMonths,
   adaptExpenseTransactionFormData,
+  adaptIncomeTransactionFormData,
   adaptMonthlyAnalysis,
   adaptMonthlyCashflow,
   adaptNetWorth,
@@ -28,6 +30,7 @@ import {
   getActiveMonthlySummary,
   getBudgetExecutionHistory,
   getExpenseCategories,
+  getIncomeCategories,
   getExpenseTransactionForEdit,
   getMonthlyFinancialSummaries,
   getNetWorth,
@@ -105,6 +108,15 @@ export async function getExpenseTransactionFormData(): Promise<ExpenseTransactio
     getBudgetBuckets(client),
   ]);
   return adaptExpenseTransactionFormData(accounts, categories, budgetRows, buckets);
+}
+
+export async function getIncomeTransactionFormData(): Promise<IncomeTransactionFormData> {
+  const client = await createClient();
+  const [accounts, categories] = await Promise.all([
+    getAccountBalances(client),
+    getIncomeCategories(client),
+  ]);
+  return adaptIncomeTransactionFormData(accounts, categories);
 }
 
 function formatShanghaiDateTimeLocal(value: string) {

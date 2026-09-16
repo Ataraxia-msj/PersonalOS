@@ -8,6 +8,7 @@ import {
   getBudgetBuckets,
   getBudgetPeriods,
   getExpenseCategories,
+  getIncomeCategories,
   getExpenseTransactionForEdit,
   getMonthlyFinancialSummaries,
   getNetWorth,
@@ -111,6 +112,18 @@ describe("Finance View queries", () => {
     expect(query.from).toHaveBeenCalledWith("categories");
     expect(query.calls).toContainEqual(["select", "*"]);
     expect(query.calls).toContainEqual(["eq", "category_type", "expense"]);
+    expect(query.calls).toContainEqual(["eq", "is_active", true]);
+    expect(query.calls).toContainEqual(["order", "sort_order", { ascending: true }]);
+  });
+
+  it("reads only active income categories in database sort order", async () => {
+    const query = createQueryDouble({ data: [], error: null });
+
+    await getIncomeCategories(query.client);
+
+    expect(query.from).toHaveBeenCalledWith("categories");
+    expect(query.calls).toContainEqual(["select", "*"]);
+    expect(query.calls).toContainEqual(["eq", "category_type", "income"]);
     expect(query.calls).toContainEqual(["eq", "is_active", true]);
     expect(query.calls).toContainEqual(["order", "sort_order", { ascending: true }]);
   });

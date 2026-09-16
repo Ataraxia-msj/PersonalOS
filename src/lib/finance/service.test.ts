@@ -12,6 +12,7 @@ import {
   getBudgetSummaries,
   getBudgetAllocations,
   getExpenseCategories,
+  getIncomeCategories,
   getExpenseTransactionForEdit,
   getMonthlyFinancialSummaries,
   getNetWorth,
@@ -27,6 +28,7 @@ import {
   getBudgetFormData,
   getFinanceOverviewData,
   getExpenseTransactionFormData,
+  getIncomeTransactionFormData,
   getExpenseTransactionEditData,
   getTransactionsPageData,
 } from "./service";
@@ -42,6 +44,7 @@ vi.mock("./queries", () => ({
   getBudgetSummaries: vi.fn(),
   getBudgetAllocations: vi.fn(),
   getExpenseCategories: vi.fn(),
+  getIncomeCategories: vi.fn(),
   getExpenseTransactionForEdit: vi.fn(),
   getMonthlyFinancialSummaries: vi.fn(),
   getNetWorth: vi.fn(),
@@ -102,6 +105,7 @@ describe("Finance service", () => {
     vi.mocked(getBudgetSummaries).mockResolvedValue([]);
     vi.mocked(getBudgetAllocations).mockResolvedValue([]);
     vi.mocked(getExpenseCategories).mockResolvedValue([]);
+    vi.mocked(getIncomeCategories).mockResolvedValue([]);
     vi.mocked(getExpenseTransactionForEdit).mockResolvedValue({
       budgetImpacts: [],
       transactionLines: [],
@@ -244,6 +248,17 @@ describe("Finance service", () => {
     expect(getAccountBalances).toHaveBeenCalledWith(client);
     expect(getExpenseCategories).toHaveBeenCalledWith(client);
     expect(getBudgetExecutionHistory).toHaveBeenCalledWith(client);
+  });
+
+  it("loads income accounts and categories concurrently through one server client", async () => {
+    await expect(getIncomeTransactionFormData()).resolves.toEqual({
+      accounts: [],
+      categories: [],
+    });
+
+    expect(createClient).toHaveBeenCalledOnce();
+    expect(getAccountBalances).toHaveBeenCalledWith(client);
+    expect(getIncomeCategories).toHaveBeenCalledWith(client);
   });
 
   it("builds editable transaction values from one grouped manual expense", async () => {

@@ -141,6 +141,11 @@ export interface ExpenseTransactionFormData {
   budgetPeriods: ExpenseBudgetPeriodOption[];
 }
 
+export interface IncomeTransactionFormData {
+  accounts: ExpenseAccountOption[];
+  categories: Array<{ id: string; name: string }>;
+}
+
 export interface BudgetFormData {
   period: { id: string; month: string; income: number; updatedAt: string; status: "draft" | "active" | "closed"; currency: string } | null;
   periods: Array<{ id: string; startDate: string; endDate: string }>;

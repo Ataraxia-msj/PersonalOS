@@ -5,6 +5,7 @@ import type {
   BudgetSection,
   CategorySpending,
   ExpenseTransactionFormData,
+  IncomeTransactionFormData,
   MonthlyCashflow,
   Transaction,
 } from "@/features/finance/types";
@@ -202,6 +203,28 @@ export function adaptExpenseTransactionFormData(
     ),
     categories: categories.map((category) => ({
       defaultBudgetBucketId: category.default_budget_bucket_id,
+      id: category.id,
+      name: category.name,
+    })),
+  };
+}
+
+export function adaptIncomeTransactionFormData(
+  accounts: AccountBalanceView[],
+  categories: ExpenseCategoryRow[],
+): IncomeTransactionFormData {
+  return {
+    accounts: accounts
+      .filter((account) => account.account_class === "asset")
+      .map((account) => ({
+        accountClass: account.account_class,
+        balance: account.estimated_balance,
+        currency: account.currency,
+        id: account.account_id,
+        institution: account.institution,
+        name: account.account_name,
+      })),
+    categories: categories.map((category) => ({
       id: category.id,
       name: category.name,
     })),

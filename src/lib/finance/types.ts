@@ -205,6 +205,23 @@ export type UpdateExpenseTransactionArgs = CreateExpenseTransactionArgs & {
 
 export type UpdateExpenseTransactionRow = CreateExpenseTransactionRow;
 
+export type CreateIncomeTransactionArgs = {
+  p_request_id: string;
+  p_occurred_at: string;
+  p_description: string;
+  p_account_id: string;
+  p_amount: number;
+  p_category_id: string;
+  p_raw_text: string | null;
+  p_memo: string | null;
+};
+
+export type CreateIncomeTransactionRow = {
+  entry_id: string;
+  line_id: string;
+  replayed: boolean;
+};
+
 type ViewDefinition<Row> = {
   Row: Row & Record<string, unknown>;
   Relationships: [];
@@ -236,6 +253,10 @@ export interface Database {
       vw_transaction_details: ViewDefinition<TransactionDetailView>;
     };
     Functions: {
+      create_income_transaction: {
+        Args: CreateIncomeTransactionArgs;
+        Returns: CreateIncomeTransactionRow[];
+      };
       create_transfer_transaction: { Args: TransferArgs; Returns: TransferResult[] };
       preview_balance_reconciliation: { Args: { p_account_id: string; p_snapshot_at: string }; Returns: ReconciliationPreviewRow[] };
       reconcile_account_balance: { Args: ReconciliationSaveArgs; Returns: ReconciliationResult[] };

@@ -4,6 +4,7 @@ import {
   adaptAccountBalances,
   adaptBudgetMonths,
   adaptExpenseTransactionFormData,
+  adaptIncomeTransactionFormData,
   adaptMonthlyAnalysis,
   adaptMonthlyCashflow,
   adaptNetWorth,
@@ -386,6 +387,39 @@ describe("Finance View adapters", () => {
         id: "category-food",
         name: "餐饮",
       }],
+    });
+  });
+
+  it("builds income form options from active income categories and asset accounts only", () => {
+    const accounts: AccountBalanceView[] = [
+      {
+        account_class: "asset", account_id: "asset-bank", account_name: "建设银行",
+        account_type: "bank", balance_source: "ledger_only", currency: "CNY",
+        estimated_balance: 1200, include_in_net_worth: true, institution: "建设银行",
+        is_active: true, latest_snapshot_at: null, latest_snapshot_balance: null,
+        ledger_change_after_snapshot: 1200, sort_order: 0,
+      },
+      {
+        account_class: "liability", account_id: "debt-loan", account_name: "助学贷款",
+        account_type: "loan", balance_source: "ledger_only", currency: "CNY",
+        estimated_balance: 48000, include_in_net_worth: true, institution: null,
+        is_active: true, latest_snapshot_at: null, latest_snapshot_balance: null,
+        ledger_change_after_snapshot: 48000, sort_order: 1,
+      },
+    ];
+    const categories = [{
+      category_type: "income" as const, created_at: "2026-09-01T00:00:00Z",
+      default_budget_bucket_id: null, id: "category-salary", is_active: true,
+      name: "工资", note: null, parent_id: null, sort_order: 0,
+      updated_at: "2026-09-01T00:00:00Z",
+    }];
+
+    expect(adaptIncomeTransactionFormData(accounts, categories)).toEqual({
+      accounts: [{
+        accountClass: "asset", balance: 1200, currency: "CNY", id: "asset-bank",
+        institution: "建设银行", name: "建设银行",
+      }],
+      categories: [{ id: "category-salary", name: "工资" }],
     });
   });
 });
