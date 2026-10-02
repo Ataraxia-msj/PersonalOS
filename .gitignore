@@ -35,6 +35,7 @@ Thumbs.db
 # Local Codex design and QA artifacts
 /design-qa.md
 /docs/superpowers/
+/.superpowers/
 /.codex/
 /.agents/
 
