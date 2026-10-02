@@ -17,8 +17,6 @@ const managed: ManagedAccount = {
   sortOrder: 0, updatedAt: "2026-01-01T00:00:00Z",
 };
 
-const idle: AccountManagementActionState = { status: "idle", message: null, fieldErrors: {} };
-
 describe("account management UI", () => {
   it("shows active accounts by default and reveals inactive real rows client-side", async () => {
     render(<AccountList accounts={[
