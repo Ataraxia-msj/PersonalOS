@@ -219,4 +219,3 @@ The UI never fabricates optimistic account balances or category state.
 - production Next.js build;
 - authenticated production read-only inspection after deployment;
 - the user performs the first production write.
-
