@@ -2,13 +2,17 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import type { Account, Transaction } from "../types";
+import type { ManagedAccount } from "@/lib/finance/account-management-types";
+import type { Transaction } from "../types";
 import { AccountList } from "./account-list";
 import { SpendingAnalysis } from "./spending-analysis";
 import { TransactionList } from "./transaction-list";
 
-const accounts: Account[] = [
-  { balance: 21480.2, id: "daily", institution: "招商银行", name: "日常账户", type: "cash" },
+const accounts: ManagedAccount[] = [
+  { accountClass: "asset", accountType: "bank", balanceSource: "snapshot", createdAt: "2026-09-01T00:00:00Z",
+    currency: "CNY", estimatedBalance: 21480.2, id: "daily", includeInNetWorth: true, institution: "招商银行",
+    isActive: true, latestSnapshotAt: "2026-09-01T00:00:00Z", name: "日常账户", note: null, sortOrder: 0,
+    updatedAt: "2026-09-01T00:00:00Z" },
 ];
 const transactions: Transaction[] = [
   { accountId: "daily", accountName: "日常账户", amount: -3800, budgetLabel: "不计入预算", category: "居住", date: "2026-09-02", editable: true, excludedFromBudget: true, icon: "home", id: "rent", merchant: "房租" },

@@ -36,7 +36,12 @@ describe("balance reconciliation UI", () => {
       result: { snapshot_id: requestId, account_id: accountId, snapshot_at: "2025-01-02T00:00:00Z", balance: 423.5, replayed: false } });
   });
   it("links each account to its real calibration and history page", () => {
-    render(<AccountList accounts={[{ id: accountId, name: "微信", institution: "", type: "cash", balance: 424.9 }]} />);
+    render(<AccountList accounts={[{
+      accountClass: "asset", accountType: "ewallet", balanceSource: "snapshot", createdAt: "2025-01-01T00:00:00Z",
+      currency: "CNY", estimatedBalance: 424.9, id: accountId, includeInNetWorth: true, institution: null,
+      isActive: true, latestSnapshotAt: "2025-01-01T00:00:00Z", name: "微信", note: null, sortOrder: 0,
+      updatedAt: "2025-01-01T00:00:00Z",
+    }]} />);
     expect(screen.getByRole("link", { name: "校准微信余额" })).toHaveAttribute("href", `/finance/accounts/${accountId}/reconcile`);
   });
   it("requires read-only preview then confirms and shows only real snapshot history", async () => {
