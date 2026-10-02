@@ -1634,6 +1634,11 @@
     padding: 16px 0;
   }
 
+  .accountRow > div:last-child {
+    grid-column: 2;
+    min-width: 0;
+  }
+
   .accountPrimaryAction {
     justify-content: center;
     width: 100%;
@@ -1653,11 +1658,6 @@
 
   .accountDangerAction {
     width: 100%;
-  }
-
-  .accountBalance,
-  .negativeBalance {
-    grid-column: 2;
   }
 
   .analysisRow {

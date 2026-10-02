@@ -116,4 +116,31 @@ describe("account management UI", () => {
     expect(payload.get("expectedUpdatedAt")).toBe("v2");
     expect(payload.get("isActive")).toBe("false");
   });
+
+  it("uses the newest version across alternating activation and metadata edits", async () => {
+    const edit: AccountEditData = { ...managed, hasLines: false, hasSnapshots: false, structureLocked: false };
+    const action = vi.fn().mockResolvedValue({
+      status: "success", message: "账户信息已更新。", fieldErrors: {}, accountId: id, updatedAt: "v3",
+    });
+    const activationAction = vi.fn()
+      .mockResolvedValueOnce({
+        status: "success", message: "账户已停用。", fieldErrors: {}, accountId: id, isActive: false, updatedAt: "v2",
+      })
+      .mockResolvedValueOnce({
+        status: "success", message: "账户已启用。", fieldErrors: {}, accountId: id, isActive: true, updatedAt: "v4",
+      });
+    render(<AccountManagementForm mode="edit" initialValues={edit} action={action} activationAction={activationAction} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "停用账户" }));
+    await waitFor(() => expect(activationAction).toHaveBeenCalledTimes(1));
+    expect((activationAction.mock.calls[0][1] as FormData).get("expectedUpdatedAt")).toBe(managed.updatedAt);
+
+    await userEvent.click(screen.getByRole("button", { name: "保存修改" }));
+    await waitFor(() => expect(action).toHaveBeenCalledOnce());
+    expect((action.mock.calls[0][1] as FormData).get("expectedUpdatedAt")).toBe("v2");
+
+    await userEvent.click(screen.getByRole("button", { name: "重新启用账户" }));
+    await waitFor(() => expect(activationAction).toHaveBeenCalledTimes(2));
+    expect((activationAction.mock.calls[1][1] as FormData).get("expectedUpdatedAt")).toBe("v3");
+  });
 });

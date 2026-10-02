@@ -73,11 +73,12 @@ export function AccountManagementForm({
   const [accountType, setAccountType] = useState<AccountType>(initialType);
   const [state, setState] = useState(initialAccountManagementActionState);
   const [activationState, setActivationState] = useState(initialAccountManagementActionState);
+  const [latestUpdatedAt, setLatestUpdatedAt] = useState(initialValues?.updatedAt);
   const [pending, startTransition] = useTransition();
   const [activationPending, startActivationTransition] = useTransition();
   const unresolvedCreatePayload = useRef<FormData | null>(null);
   const structureLocked = mode === "edit" && Boolean(initialValues?.structureLocked);
-  const effectiveUpdatedAt = activationState.updatedAt ?? state.updatedAt ?? initialValues?.updatedAt;
+  const effectiveUpdatedAt = latestUpdatedAt;
   const effectiveActive = activationState.status === "success" && typeof activationState.isActive === "boolean"
     ? activationState.isActive
     : initialValues?.isActive ?? true;
@@ -113,6 +114,7 @@ export function AccountManagementForm({
           };
         }
         if (mode === "create" && next.status !== "uncertain") unresolvedCreatePayload.current = null;
+        if (mode === "edit" && next.status === "success" && next.updatedAt) setLatestUpdatedAt(next.updatedAt);
         setState(next);
       } catch {
         setState({
@@ -132,7 +134,9 @@ export function AccountManagementForm({
     const data = new FormData(event.currentTarget);
     startActivationTransition(async () => {
       try {
-        setActivationState(await activationAction(activationState, data));
+        const next = await activationAction(activationState, data);
+        if (next.status === "success" && next.updatedAt) setLatestUpdatedAt(next.updatedAt);
+        setActivationState(next);
       } catch {
         setActivationState({
           ...initialAccountManagementActionState,
