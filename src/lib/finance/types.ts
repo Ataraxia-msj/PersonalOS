@@ -49,6 +49,79 @@ export interface AccountBalanceView {
   balance_source: BalanceSource;
 }
 
+export interface AccountRow {
+  id: string;
+  name: string;
+  account_class: AccountClass;
+  account_type: AccountType;
+  currency: string;
+  institution: string | null;
+  include_in_net_worth: boolean;
+  is_active: boolean;
+  sort_order: number;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JournalLineRow {
+  id: string;
+  entry_id: string;
+  account_id: string;
+  amount: number;
+  category_id: string | null;
+  memo: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CreateAccountArgs = {
+  p_request_id: string;
+  p_name: string;
+  p_account_class: AccountClass;
+  p_account_type: AccountType;
+  p_currency: string;
+  p_institution: string | null;
+  p_include_in_net_worth: boolean;
+  p_sort_order: number;
+  p_note: string | null;
+  p_initial_balance: number;
+  p_balance_at: string;
+};
+
+export type CreateAccountRow = {
+  account_id: string;
+  snapshot_id: string;
+  account_updated_at: string;
+  replayed: boolean;
+};
+
+export type UpdateAccountArgs = Omit<CreateAccountArgs,
+  "p_request_id" | "p_initial_balance" | "p_balance_at"
+> & {
+  p_account_id: string;
+  p_expected_updated_at: string;
+};
+
+export type UpdateAccountRow = {
+  account_id: string;
+  account_updated_at: string;
+  structure_locked: boolean;
+};
+
+export type SetAccountActiveArgs = {
+  p_account_id: string;
+  p_expected_updated_at: string;
+  p_is_active: boolean;
+};
+
+export type SetAccountActiveRow = {
+  account_id: string;
+  account_updated_at: string;
+  is_active: boolean;
+};
+
 export interface BudgetExecutionView {
   budget_period_id: string;
   start_date: string;
@@ -237,6 +310,7 @@ type TableDefinition<Row> = {
 export interface Database {
   public: {
     Tables: {
+      accounts: TableDefinition<AccountRow>;
       balance_snapshots: TableDefinition<BalanceSnapshotRow>;
       budget_buckets: TableDefinition<BudgetBucketRow>;
       budget_periods: TableDefinition<BudgetPeriodRow>;
@@ -244,6 +318,7 @@ export interface Database {
       budget_impacts: TableDefinition<BudgetImpactRow>;
       categories: TableDefinition<ExpenseCategoryRow>;
       journal_entries: TableDefinition<JournalEntryRow>;
+      journal_lines: TableDefinition<JournalLineRow>;
     };
     Views: {
       vw_net_worth: ViewDefinition<NetWorthView>;
@@ -253,6 +328,10 @@ export interface Database {
       vw_transaction_details: ViewDefinition<TransactionDetailView>;
     };
     Functions: {
+      create_account: {
+        Args: CreateAccountArgs;
+        Returns: CreateAccountRow[];
+      };
       create_income_transaction: {
         Args: CreateIncomeTransactionArgs;
         Returns: CreateIncomeTransactionRow[];
@@ -268,6 +347,14 @@ export interface Database {
       update_expense_transaction: {
         Args: UpdateExpenseTransactionArgs;
         Returns: UpdateExpenseTransactionRow[];
+      };
+      set_account_active: {
+        Args: SetAccountActiveArgs;
+        Returns: SetAccountActiveRow[];
+      };
+      update_account: {
+        Args: UpdateAccountArgs;
+        Returns: UpdateAccountRow[];
       };
     };
     Enums: Record<string, never>;
