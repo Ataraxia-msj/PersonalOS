@@ -2,7 +2,7 @@
 
 import { IconArrowLeft, IconExclamationCircle } from "@tabler/icons-react";
 import Link from "next/link";
-import { useEffect, useState, useTransition, type FormEvent } from "react";
+import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 
 import {
   initialAccountManagementActionState,
@@ -28,6 +28,12 @@ const noActivation: Action = async () => ({
   message: "当前页面不支持修改账户状态。",
   status: "error",
 });
+
+function copyFormData(source: FormData): FormData {
+  const copy = new FormData();
+  for (const [key, value] of source.entries()) copy.append(key, value);
+  return copy;
+}
 
 function SubmitButton({ mode, done, pending, uncertain }: {
   mode: "create" | "edit"; done: boolean; pending: boolean; uncertain: boolean;
@@ -69,7 +75,12 @@ export function AccountManagementForm({
   const [activationState, setActivationState] = useState(initialAccountManagementActionState);
   const [pending, startTransition] = useTransition();
   const [activationPending, startActivationTransition] = useTransition();
+  const unresolvedCreatePayload = useRef<FormData | null>(null);
   const structureLocked = mode === "edit" && Boolean(initialValues?.structureLocked);
+  const effectiveUpdatedAt = activationState.updatedAt ?? state.updatedAt ?? initialValues?.updatedAt;
+  const effectiveActive = activationState.status === "success" && typeof activationState.isActive === "boolean"
+    ? activationState.isActive
+    : initialValues?.isActive ?? true;
 
   useEffect(() => {
     if (mode === "create") setRequestId(crypto.randomUUID());
@@ -85,15 +96,51 @@ export function AccountManagementForm({
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending || state.status === "success") return;
-    const data = new FormData(event.currentTarget);
-    startTransition(async () => setState(await action(state, data)));
+    const current = new FormData(event.currentTarget);
+    let data = current;
+    if (mode === "create") {
+      if (!unresolvedCreatePayload.current) unresolvedCreatePayload.current = copyFormData(current);
+      data = copyFormData(unresolvedCreatePayload.current);
+    }
+    startTransition(async () => {
+      try {
+        let next = await action(state, data);
+        if (mode === "create" && state.status === "uncertain" && next.status !== "success") {
+          next = {
+            ...next,
+            message: `${next.message ?? "重试未成功。"} 首次创建结果仍未确认；请继续使用同一次创建重试。`,
+            status: "uncertain",
+          };
+        }
+        if (mode === "create" && next.status !== "uncertain") unresolvedCreatePayload.current = null;
+        setState(next);
+      } catch {
+        setState({
+          ...initialAccountManagementActionState,
+          message: mode === "create"
+            ? "网络中断，未能确认创建结果。表单会保留首次提交内容，请重试同一次创建。"
+            : "网络中断，未能确认修改结果。请刷新账户页面核对当前资料，不要立即重复提交。",
+          status: "uncertain",
+        });
+      }
+    });
   }
 
   function submitActivation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (activationPending) return;
     const data = new FormData(event.currentTarget);
-    startActivationTransition(async () => setActivationState(await activationAction(activationState, data)));
+    startActivationTransition(async () => {
+      try {
+        setActivationState(await activationAction(activationState, data));
+      } catch {
+        setActivationState({
+          ...initialAccountManagementActionState,
+          message: "网络中断，未能确认账户状态。请刷新账户页面核对，不要立即重复操作。",
+          status: "uncertain",
+        });
+      }
+    });
   }
 
   const fieldError = (name: string) => state.fieldErrors[name]
@@ -116,7 +163,7 @@ export function AccountManagementForm({
         {mode === "create" ? <input name="requestId" type="hidden" value={requestId} /> : (
           <>
             <input name="accountId" type="hidden" value={initialValues?.id} />
-            <input name="expectedUpdatedAt" type="hidden" value={initialValues?.updatedAt} />
+            <input name="expectedUpdatedAt" type="hidden" value={effectiveUpdatedAt} />
           </>
         )}
         <fieldset className={styles.accountFormFieldset} disabled={state.status === "success"}>
@@ -183,7 +230,8 @@ export function AccountManagementForm({
             className={state.status === "error" ? styles.expenseError : styles.expenseNotice}>{state.message}</p> : null}
           <div className={styles.expenseActions}>
             <p>{mode === "create" ? "保存时会同时建立第一条余额快照；不会生成收支交易。" : "账户余额请在账户列表使用“校准 / 历史”更新。"}</p>
-            <SubmitButton mode={mode} done={state.status === "success"} pending={pending} uncertain={state.status === "uncertain"} />
+            <SubmitButton mode={mode} done={state.status === "success" || (mode === "edit" && state.status === "uncertain")}
+              pending={pending} uncertain={state.status === "uncertain"} />
           </div>
         </fieldset>
       </form>
@@ -192,9 +240,9 @@ export function AccountManagementForm({
         <div><h3>账户状态</h3><p>{initialValues.isActive ? "停用后不会出现在新交易的账户选项中，历史数据仍保留。" : "重新启用后可继续用于新交易。"}</p></div>
         <form onSubmit={submitActivation}>
           <input name="accountId" type="hidden" value={initialValues.id} />
-          <input name="expectedUpdatedAt" type="hidden" value={initialValues.updatedAt} />
-          <input name="isActive" type="hidden" value={String(!initialValues.isActive)} />
-          <ActivationButton active={initialValues.isActive} pending={activationPending} />
+          <input name="expectedUpdatedAt" type="hidden" value={effectiveUpdatedAt} />
+          <input name="isActive" type="hidden" value={String(!effectiveActive)} />
+          <ActivationButton active={effectiveActive} pending={activationPending || activationState.status === "uncertain"} />
         </form>
         {activationState.message ? <p role={activationState.status === "error" || activationState.status === "uncertain" ? "alert" : "status"}
           className={activationState.status === "error" ? styles.expenseError : styles.expenseNotice}>{activationState.message}</p> : null}

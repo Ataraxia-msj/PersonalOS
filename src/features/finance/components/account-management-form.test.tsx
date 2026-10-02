@@ -35,6 +35,16 @@ describe("account management UI", () => {
     expect(screen.getByRole("link", { name: "校准旧账户余额" })).toBeInTheDocument();
   });
 
+  it("labels account class, net-worth inclusion, and non-CNY balances truthfully", () => {
+    render(<AccountList accounts={[{
+      ...managed, accountClass: "liability", accountType: "loan", currency: "USD",
+      estimatedBalance: 100, includeInNetWorth: false, name: "美元贷款",
+    }]} />);
+    expect(screen.getByText(/建设银行 · 负债 · 贷款 · USD · 不计入净资产/)).toBeInTheDocument();
+    expect(screen.getByText("$100.00")).toBeInTheDocument();
+    expect(screen.queryByText("¥100.00")).not.toBeInTheDocument();
+  });
+
   it("renders labeled create controls and filters types when class changes", async () => {
     render(<AccountManagementForm mode="create" defaultBalanceAt="2026-10-02T09:30:00" action={vi.fn()} />);
     expect(screen.getByLabelText("账户名称")).toBeInTheDocument();
@@ -68,20 +78,42 @@ describe("account management UI", () => {
     expect(screen.getByRole("button", { name: "保存账户" })).toBeDisabled();
   });
 
+  it("catches a rejected create transport and replays the frozen first payload", async () => {
+    const action = vi.fn()
+      .mockRejectedValueOnce(new Error("network lost"))
+      .mockResolvedValueOnce({ status: "success", message: "账户和初始余额已保存。", fieldErrors: {}, accountId: id });
+    render(<AccountManagementForm mode="create" defaultBalanceAt="2026-10-02T09:30:00" action={action} />);
+    const name = screen.getByLabelText("账户名称");
+    await userEvent.type(name, "首次名称");
+    await userEvent.type(screen.getByLabelText("当前余额"), "1.23");
+    await userEvent.click(screen.getByRole("button", { name: "保存账户" }));
+    await screen.findByText(/未能确认/);
+    const first = action.mock.calls[0][1] as FormData;
+    await userEvent.clear(name);
+    await userEvent.type(name, "后来修改");
+    await userEvent.click(screen.getByRole("button", { name: "重试同一次创建" }));
+    await screen.findByText("账户和初始余额已保存。");
+    const second = action.mock.calls[1][1] as FormData;
+    expect([...second]).toEqual([...first]);
+  });
+
   it("locks structural fields on edit, omits balance inputs, and explicitly changes activation", async () => {
     const edit: AccountEditData = { ...managed, hasLines: true, hasSnapshots: true, structureLocked: true };
-    const action = vi.fn().mockResolvedValue({ status: "success", message: "账户信息已更新。", fieldErrors: {}, accountId: id });
-    const activationAction = vi.fn().mockResolvedValue({ status: "success", message: "账户已停用。", fieldErrors: {}, accountId: id, isActive: false });
+    const action = vi.fn().mockResolvedValue({ status: "success", message: "账户信息已更新。", fieldErrors: {}, accountId: id, updatedAt: "v2" });
+    const activationAction = vi.fn().mockResolvedValue({ status: "success", message: "账户已停用。", fieldErrors: {}, accountId: id, isActive: false, updatedAt: "v3" });
     render(<AccountManagementForm mode="edit" initialValues={edit} action={action} activationAction={activationAction} />);
     expect(screen.getByLabelText("资产 / 负债")).toBeDisabled();
     expect(screen.getByLabelText("账户类型")).toBeDisabled();
     expect(screen.getByLabelText("币种")).toBeDisabled();
     expect(screen.queryByLabelText("当前余额")).not.toBeInTheDocument();
     expect(screen.getByText(/已有余额或交易/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "保存修改" }));
+    await waitFor(() => expect(action).toHaveBeenCalledOnce());
     await userEvent.click(screen.getByRole("button", { name: "停用账户" }));
     await waitFor(() => expect(activationAction).toHaveBeenCalledOnce());
     const payload = activationAction.mock.calls[0][1] as FormData;
     expect(payload.get("accountId")).toBe(id);
+    expect(payload.get("expectedUpdatedAt")).toBe("v2");
     expect(payload.get("isActive")).toBe("false");
   });
 });

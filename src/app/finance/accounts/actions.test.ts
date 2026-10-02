@@ -136,6 +136,18 @@ describe("account management actions", () => {
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
+  it("does not advise blind retry after an uncertain non-idempotent update or activation", async () => {
+    vi.mocked(updateManagedAccount).mockRejectedValueOnce(new Error("fetch failed"));
+    const update = await updateAccountAction({ status: "idle", message: null, fieldErrors: {} }, updateForm());
+    expect(update).toMatchObject({ status: "uncertain", message: expect.stringMatching(/刷新/) });
+    expect(update.message).not.toMatch(/重试同一次/);
+
+    vi.mocked(setManagedAccountActive).mockRejectedValueOnce(new Error("fetch failed"));
+    const active = await setAccountActiveAction({ status: "idle", message: null, fieldErrors: {} }, activeForm());
+    expect(active).toMatchObject({ status: "uncertain", message: expect.stringMatching(/刷新/) });
+    expect(active.message).not.toMatch(/重试同一次/);
+  });
+
   it("describes an idempotent replay without claiming a second account", async () => {
     vi.mocked(createManagedAccount).mockResolvedValueOnce({ accountId, snapshotId: requestId, updatedAt: "v2", replayed: true });
     const result = await createAccountAction({ status: "idle", message: null, fieldErrors: {} }, createForm());

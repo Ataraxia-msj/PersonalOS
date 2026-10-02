@@ -94,6 +94,7 @@ assert.equal(metadata.structure_locked, true);
 asset = await one("select * from accounts where id=$1", [assetId]);
 assert.equal(asset.name, "Primary Bank Renamed");
 assert.equal(asset.include_in_net_worth, false);
+assert.equal((await callCreate(assetInput)).replayed, true, "original create payload must replay after metadata edits");
 await assert.rejects(callUpdate(asset, { accountClass: "liability", accountType: "loan" }), /account_structure_locked/);
 await assert.rejects(callUpdate(asset, { expected: "2000-01-01T00:00:00Z", name: "stale" }), /stale_account/);
 

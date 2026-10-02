@@ -1,7 +1,11 @@
--- REVIEW BEFORE EXECUTION. Adds authenticated account-management RPCs only.
--- No table/View/RLS/table-grant changes and no historical data rewrite.
+-- REVIEW BEFORE EXECUTION. Adds authenticated account-management RPCs and one
+-- nullable snapshot column used to preserve immutable create-request payloads.
+-- No View/RLS/table-grant changes and no historical data rewrite.
 begin;
 set local lock_timeout = '5s';
+
+alter table public.balance_snapshots
+  add column if not exists creation_request_payload jsonb;
 
 create function public.create_account(
   p_request_id uuid,
@@ -35,6 +39,7 @@ declare
   v_note text := nullif(btrim(p_note), '');
   v_existing public.accounts%rowtype;
   v_snapshot public.balance_snapshots%rowtype;
+  v_request_payload jsonb;
 begin
   if current_user <> 'authenticated' or auth.uid() is null then
     raise exception 'authentication_required' using errcode = '42501';
@@ -80,6 +85,19 @@ begin
     raise exception 'invalid_balance_time' using errcode = '22023';
   end if;
 
+  v_request_payload := jsonb_build_object(
+    'name', v_name,
+    'account_class', p_account_class,
+    'account_type', p_account_type,
+    'currency', p_currency,
+    'institution', v_institution,
+    'include_in_net_worth', p_include_in_net_worth,
+    'sort_order', p_sort_order,
+    'note', v_note,
+    'initial_balance', p_initial_balance,
+    'balance_at', p_balance_at
+  );
+
   perform pg_advisory_xact_lock(1782, 1);
 
   select a.* into v_existing
@@ -92,19 +110,8 @@ begin
     where bs.id = p_request_id;
 
     if v_snapshot.id is null
-      or v_existing.name is distinct from v_name
-      or v_existing.account_class is distinct from p_account_class
-      or v_existing.account_type is distinct from p_account_type
-      or v_existing.currency is distinct from p_currency
-      or v_existing.institution is distinct from v_institution
-      or v_existing.include_in_net_worth is distinct from p_include_in_net_worth
-      or v_existing.sort_order is distinct from p_sort_order
-      or v_existing.note is distinct from v_note
       or v_snapshot.account_id is distinct from p_request_id
-      or v_snapshot.snapshot_at is distinct from p_balance_at
-      or v_snapshot.balance is distinct from p_initial_balance
-      or v_snapshot.source <> 'manual'
-      or v_snapshot.note is distinct from v_note then
+      or v_snapshot.creation_request_payload is distinct from v_request_payload then
       raise exception 'request_payload_conflict' using errcode = '22023';
     end if;
 
@@ -125,9 +132,10 @@ begin
   end;
 
   insert into public.balance_snapshots (
-    id, account_id, snapshot_at, balance, source, note
+    id, account_id, snapshot_at, balance, source, note, creation_request_payload
   ) values (
-    p_request_id, p_request_id, p_balance_at, p_initial_balance, 'manual', v_note
+    p_request_id, p_request_id, p_balance_at, p_initial_balance, 'manual', v_note,
+    v_request_payload
   ) returning * into v_snapshot;
 
   return query select v_existing.id, v_snapshot.id, v_existing.updated_at, false;

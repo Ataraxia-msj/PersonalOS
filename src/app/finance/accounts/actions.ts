@@ -41,7 +41,7 @@ async function authenticatedClient() {
   return error || !data?.claims?.sub ? null : client;
 }
 
-function mutationFailure(error: unknown): AccountManagementActionState {
+function mutationFailure(error: unknown, replaySafe: boolean): AccountManagementActionState {
   if (error instanceof AccountManagementMutationError) {
     if (error.code === "PGRST202" || /(?:create|update|set)_account/.test(error.message) && /missing|schema cache/i.test(error.message)) {
       return { ...idle(), status: "error", message: "数据库账户管理功能尚未部署，请先执行 account management RPC migration。" };
@@ -55,7 +55,9 @@ function mutationFailure(error: unknown): AccountManagementActionState {
   return {
     ...idle(),
     status: "uncertain",
-    message: "未能确认账户操作结果。请保留当前页面并重试同一次操作，系统会避免重复创建。",
+    message: replaySafe
+      ? "未能确认账户创建结果。请保留当前页面并重试同一次创建，系统会避免重复创建。"
+      : "未能确认账户操作结果。请刷新账户页面核对当前状态，不要立即重复提交。",
   };
 }
 
@@ -92,7 +94,7 @@ export async function createAccountAction(
       updatedAt: result.updatedAt,
     };
   } catch (error) {
-    return mutationFailure(error);
+    return mutationFailure(error, true);
   }
 }
 
@@ -111,7 +113,7 @@ export async function updateAccountAction(
       status: "success", updatedAt: result.updatedAt,
     };
   } catch (error) {
-    return mutationFailure(error);
+    return mutationFailure(error, false);
   }
 }
 
@@ -131,6 +133,6 @@ export async function setAccountActiveAction(
       message: refreshFinance(copy), status: "success", updatedAt: result.updatedAt,
     };
   } catch (error) {
-    return mutationFailure(error);
+    return mutationFailure(error, false);
   }
 }

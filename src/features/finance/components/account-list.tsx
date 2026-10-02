@@ -13,7 +13,7 @@ import { useState } from "react";
 
 import type { ManagedAccount } from "@/lib/finance/account-management-types";
 
-import { formatCurrency } from "../format";
+import { formatCurrencyIn } from "../format";
 import styles from "./finance.module.css";
 import calibration from "./reconciliation.module.css";
 
@@ -86,14 +86,14 @@ export function AccountList({ accounts }: AccountListProps) {
                   <strong>{account.name}</strong>
                   {!account.isActive ? <small>已停用</small> : null}
                 </span>
-                <span>{account.institution || "未设置机构"} · {accountTypeLabels[account.accountType]} · {account.currency}</span>
+                <span>{account.institution || "未设置机构"} · {account.accountClass === "asset" ? "资产" : "负债"} · {accountTypeLabels[account.accountType]} · {account.currency} · {account.includeInNetWorth ? "计入净资产" : "不计入净资产"}</span>
               </div>
               <div className={calibration.accountActions}>
                 {account.estimatedBalance === null ? (
                   <strong className={styles.accountBalanceMissing}>暂无余额数据</strong>
                 ) : (
                   <strong className={account.estimatedBalance < 0 ? styles.negativeBalance : styles.accountBalance}>
-                    {account.estimatedBalance < 0 ? "-" : ""}{formatCurrency(account.estimatedBalance, 2)}
+                    {account.estimatedBalance < 0 ? "-" : ""}{formatCurrencyIn(account.estimatedBalance, account.currency, 2)}
                   </strong>
                 )}
                 <span className={styles.accountLinks}>

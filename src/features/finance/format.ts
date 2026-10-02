@@ -12,6 +12,24 @@ export function formatCurrency(value: number, fractionDigits = 0): string {
     .replace("CN¥", "¥");
 }
 
+export function formatCurrencyIn(value: number, currency: string, fractionDigits = 2): string {
+  try {
+    return new Intl.NumberFormat("zh-CN", {
+      style: "currency",
+      currency,
+      currencyDisplay: "narrowSymbol",
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    }).format(Math.abs(value));
+  } catch {
+    const number = new Intl.NumberFormat("zh-CN", {
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    }).format(Math.abs(value));
+    return `${number} ${currency}`;
+  }
+}
+
 export function formatSignedCurrency(value: number): string {
   const sign = value > 0 ? "+" : value < 0 ? "-" : "";
   return `${sign}${formatCurrency(value)}`;
