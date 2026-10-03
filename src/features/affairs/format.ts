@@ -1,0 +1,2 @@
+export function formatProgressRate(rate:number|null):string{if(rate===null)return '尚未设置阶段成果';if(!Number.isFinite(rate)||rate<0||rate>1)throw new Error('invalid_progress_rate');return Math.round(rate*100)+'%';}
+export function formatAffairsTime(value:string):string{return new Date(value).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}

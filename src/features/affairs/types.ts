@@ -11,8 +11,8 @@ export type AffairsReward=MutableUi<RewardRow>;
 export type AffairsRedemption=MutableUi<RedemptionRow>;
 export type AffairsPenalty=MutableUi<PenaltyRow>;
 export type AffairsCoinEntry=Omit<Camel<CoinLedgerRow>,'walletSequence'|'balanceAfter'>&{walletSequence:string;balanceAfter:number};
-export interface AffairsDashboardData {mainlines:AffairsMainline[];projects:AffairsProject[];tasks:AffairsTask[];progress:AffairsProgress[];contributions:DailyContributionRow[];balance:number;today:string}
-export interface AffairsProjectDetailData {project:AffairsProject;milestones:AffairsMilestone[];tasks:AffairsTask[];progress:AffairsProgress[];balance:number}
+export interface AffairsDashboardData {mainlines:AffairsMainline[];projects:AffairsProject[];tasks:AffairsTask[];progress:AffairsProgress[];contributions:DailyContributionRow[];balance:number;today:string;serverNowISO:string}
+export interface AffairsProjectDetailData {project:AffairsProject;milestones:AffairsMilestone[];tasks:AffairsTask[];progress:AffairsProgress[];balance:number;serverNowISO:string}
 export interface AffairsTaskListData {tasks:AffairsTask[];projects:AffairsProject[];balance:number}
 export interface AffairsShopData {rewards:AffairsReward[];redemptions:AffairsRedemption[];balance:number}
 export interface AffairsCoinsData {ledger:AffairsCoinEntry[];penalties:AffairsPenalty[];tasks:AffairsTask[];balance:number;nextBeforeSequence:string|null}

@@ -9,12 +9,12 @@ export function createAffairsServices(clientFactory:()=>Promise<q.AffairsQueryCl
   const c=await clientFactory();const today=shanghaiInput(now).slice(0,10);const from=new Date(today+'T00:00:00Z');from.setUTCDate(from.getUTCDate()-181);
   const fromDate=from.toISOString().slice(0,10);
   const [ml,pr,ta,progress,contributions,balance]=await Promise.all([q.getAffairsMainlines(c),q.getAffairsProjects(c),q.getAffairsTasks(c),q.getAffairsProgress(c),q.getAffairsContributions(c,fromDate,today),q.getAffairsCoinBalance(c)]);
-  return {mainlines:ml.map(a.adaptMainline),projects:pr.map(a.adaptProject),tasks:ta.map(a.adaptTask),progress:progress.map(a.adaptProgress),contributions,balance:a.adaptBalance(balance),today};
+  return {mainlines:ml.map(a.adaptMainline),projects:pr.map(a.adaptProject),tasks:ta.map(a.adaptTask),progress:progress.map(a.adaptProgress),contributions,balance:a.adaptBalance(balance),today,serverNowISO:now.toISOString()};
  },
  async getAffairsProjectsData():Promise<Ui.AffairsProject[]>{const c=await clientFactory();return (await q.getAffairsProjects(c)).map(a.adaptProject);},
  async getAffairsProjectDetailData(projectId:string):Promise<Ui.AffairsProjectDetailData|null>{
   const c=await clientFactory();const [pr,mi,ta,progress,balance]=await Promise.all([q.getAffairsProjects(c),q.getAffairsMilestones(c,projectId),q.getAffairsTasks(c,projectId),q.getAffairsProgress(c,{projectId}),q.getAffairsCoinBalance(c)]);
-  const project=pr.find(r=>r.id===projectId);return project?{project:a.adaptProject(project),milestones:mi.map(a.adaptMilestone),tasks:ta.map(a.adaptTask),progress:progress.map(a.adaptProgress),balance:a.adaptBalance(balance)}:null;
+  const project=pr.find(r=>r.id===projectId);return project?{project:a.adaptProject(project),milestones:mi.map(a.adaptMilestone),tasks:ta.map(a.adaptTask),progress:progress.map(a.adaptProgress),balance:a.adaptBalance(balance),serverNowISO:new Date().toISOString()}:null;
  },
  async getAffairsTaskListData():Promise<Ui.AffairsTaskListData>{const c=await clientFactory();const [tasks,projects,balance]=await Promise.all([q.getAffairsTasks(c),q.getAffairsProjects(c),q.getAffairsCoinBalance(c)]);return {tasks:tasks.map(a.adaptTask),projects:projects.map(a.adaptProject),balance:a.adaptBalance(balance)};},
  async getAffairsShopData():Promise<Ui.AffairsShopData>{const c=await clientFactory();const [rewards,redemptions,balance]=await Promise.all([q.getAffairsRewards(c),q.getAffairsRedemptions(c),q.getAffairsCoinBalance(c)]);return {rewards:rewards.map(a.adaptReward),redemptions:redemptions.map(a.adaptRedemption),balance:a.adaptBalance(balance)};},
