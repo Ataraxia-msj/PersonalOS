@@ -1,5 +1,10 @@
 import type {
   Account,
+  AnalysisCategory,
+  AnalysisChangeTone,
+  AnalysisInsight,
+  AnalysisMetric,
+  AnalysisTrendPoint,
   BudgetCategory,
   BudgetMonth,
   BudgetSection,
@@ -15,6 +20,9 @@ import type {
   BudgetBucketRow,
   BudgetExecutionView,
   ExpenseCategoryRow,
+  FinancialInsightView,
+  MonthlyCategorySpendingView,
+  MonthlyFinancialAnalysisView,
   MonthlyFinancialSummaryView,
   NetWorthView,
   TransactionDetailView,
@@ -258,6 +266,83 @@ export function adaptMonthlyAnalysis(
   ];
 }
 
+function analysisTone(rate: number | null, inverse = false): AnalysisChangeTone {
+  if (rate === null || rate === 0) return "neutral";
+  const favorable = inverse ? rate < 0 : rate > 0;
+  return favorable ? "favorable" : "adverse";
+}
+
+function analysisMetric(
+  value: number,
+  momAmount: number | null,
+  momRate: number | null,
+  yoyAmount: number | null,
+  yoyRate: number | null,
+  inverse = false,
+): AnalysisMetric {
+  return {
+    value,
+    mom: { amount: momAmount, rate: momRate, tone: analysisTone(momRate, inverse) },
+    yoy: { amount: yoyAmount, rate: yoyRate, tone: analysisTone(yoyRate, inverse) },
+  };
+}
+
+export function adaptAnalysisSummary(row: MonthlyFinancialAnalysisView | null) {
+  if (!row) return null;
+  return {
+    balance: analysisMetric(row.monthly_balance, row.balance_mom_change, row.balance_mom_rate,
+      row.balance_yoy_change, row.balance_yoy_rate),
+    executionRate: row.overall_execution_rate,
+    executionRateMom: row.previous_month_execution_rate === null || row.overall_execution_rate === null
+      ? null : row.overall_execution_rate - row.previous_month_execution_rate,
+    expense: analysisMetric(row.actual_total_expense, row.expense_mom_change, row.expense_mom_rate,
+      row.expense_yoy_change, row.expense_yoy_rate, true),
+    income: analysisMetric(row.actual_income, row.income_mom_change, row.income_mom_rate,
+      row.income_yoy_change, row.income_yoy_rate),
+    netWorth: row.net_worth_as_of,
+    netWorthChange: row.net_worth_change,
+    savingRate: row.saving_rate,
+    savingRateMom: row.previous_month_saving_rate === null || row.saving_rate === null
+      ? null : row.saving_rate - row.previous_month_saving_rate,
+  };
+}
+
+export function adaptAnalysisTrend(rows: MonthlyFinancialAnalysisView[]): AnalysisTrendPoint[] {
+  return rows.toSorted((left, right) => left.month.localeCompare(right.month)).slice(-12).map((row) => ({
+    balance: row.monthly_balance,
+    expense: row.actual_total_expense,
+    income: row.actual_income,
+    label: formatMonth(row.month),
+    month: row.month,
+  }));
+}
+
+export function adaptAnalysisCategories(rows: MonthlyCategorySpendingView[]): AnalysisCategory[] {
+  return rows.toSorted((left, right) => left.month_rank - right.month_rank || left.category_id.localeCompare(right.category_id))
+    .map((row) => ({
+      amount: row.actual_amount,
+      id: row.category_id,
+      name: row.category_name,
+      rank: row.month_rank,
+      share: row.month_share,
+      transactionCount: row.transaction_count,
+    }));
+}
+
+export function adaptAnalysisInsights(rows: FinancialInsightView[]): AnalysisInsight[] {
+  const severityOrder = { warning: 0, reminder: 1 } as const;
+  return rows.toSorted((left, right) => severityOrder[left.severity] - severityOrder[right.severity]
+    || left.insight_key.localeCompare(right.insight_key)).map((row) => ({
+      id: row.insight_key,
+      message: row.message,
+      metric: row.metric_value,
+      severity: row.severity,
+      threshold: row.threshold_value,
+      title: row.title,
+      type: row.insight_type,
+    }));
+}
+
 export function adaptBudgetMonths(
   rows: BudgetExecutionView[],
   summaries: MonthlyFinancialSummaryView[],
@@ -325,10 +410,12 @@ export function adaptBudgetMonths(
     allocation.push(...uncategorized.filter((category) => !spending.includes(category)));
 
     return {
-      actualTotal: orderedRows.reduce((total, row) => total + row.actual_amount, 0),
+      actualTotal:
+        summary?.actual_total_allocated ??
+        orderedRows.reduce((total, row) => total + row.actual_amount, 0),
       editable: first.period_status === "active",
       status: first.period_status,
-      executionRate: null,
+      executionRate: summary?.overall_execution_rate ?? null,
       id: periodId,
       label: formatMonth(first.start_date),
       plannedTotal:

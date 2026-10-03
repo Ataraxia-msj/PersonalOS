@@ -1,46 +1,43 @@
-import { formatCurrency } from "../format";
-import type { CategorySpending } from "../types";
+import type { FinanceAnalysisPageData } from "../types";
+import { AnalysisBudgetSection } from "./analysis-budget-section";
+import { AnalysisCategorySection } from "./analysis-category-section";
+import { AnalysisInsights } from "./analysis-insights";
+import { AnalysisSummary } from "./analysis-summary";
+import { AnalysisTrendChart } from "./analysis-trend-chart";
 import styles from "./finance.module.css";
 
-interface SpendingAnalysisProps {
-  spending: CategorySpending[];
-}
-
-export function SpendingAnalysis({ spending }: SpendingAnalysisProps) {
-  const maximum = Math.max(...spending.map((item) => item.amount), 1);
-  const total = spending.reduce((sum, item) => sum + item.amount, 0);
-
+export function SpendingAnalysis({ data }: { data: FinanceAnalysisPageData }) {
   return (
-    <section aria-labelledby="analysis-title" className={styles.moduleSection}>
-      <div className={styles.moduleTitleRow}>
+    <section aria-labelledby="analysis-title" className={styles.analysisDashboard}>
+      <header className={styles.analysisHeader}>
         <div>
           <p className={styles.eyebrow}>ANALYSIS</p>
-          <h2 id="analysis-title">月度资金分析</h2>
-          <p>来自月度财务汇总 View 的实际执行结构</p>
+          <h2 id="analysis-title">财务分析</h2>
+          <p>全部指标来自财务 View；建议仅基于可解释规则。</p>
         </div>
-        <div className={styles.analysisTotal}>
-          <span>实际安排</span>
-          <strong>{formatCurrency(total)}</strong>
-        </div>
-      </div>
-      {spending.length === 0 ? (
-        <p className={styles.emptyState}>暂无月度汇总数据</p>
-      ) : null}
-      <div className={styles.analysisRows}>
-        {spending.map((item) => (
-          <article className={styles.analysisRow} key={item.category}>
-            <div>
-              <strong>{item.category}</strong>
-              <span>{total === 0 ? 0 : Math.round((item.amount / total) * 100)}%</span>
-            </div>
-            <div className={styles.analysisBar}>
-              <span style={{ width: `${(item.amount / maximum) * 100}%` }} />
-            </div>
-            <strong>{formatCurrency(item.amount)}</strong>
-          </article>
-        ))}
-      </div>
-      <p className={styles.budgetFootnote}>储蓄、投资为累计投入，转回不冲减；不是净增资产。还款仅含本金。</p>
+        {data.availableMonths.length > 0 ? (
+          <form action="/finance/analysis" className={styles.analysisMonthForm} method="get">
+            <label htmlFor="analysis-month">分析月份</label>
+            <select defaultValue={data.selectedMonth ?? ""} id="analysis-month" name="month">
+              {data.availableMonths.map((month) => <option key={month.value} value={month.value}>{month.label}</option>)}
+            </select>
+            <button type="submit">查看</button>
+          </form>
+        ) : null}
+      </header>
+      {!data.summary || !data.selectedMonth ? (
+        <p className={styles.emptyState}>暂无可分析的月度财务数据</p>
+      ) : (
+        <>
+          <AnalysisSummary summary={data.summary} />
+          <AnalysisTrendChart points={data.trend} />
+          <div className={styles.analysisTwoColumn}>
+            <AnalysisBudgetSection sections={data.budgetSections} />
+            <AnalysisCategorySection categories={data.categories} />
+          </div>
+          <AnalysisInsights insights={data.insights} />
+        </>
+      )}
     </section>
   );
 }

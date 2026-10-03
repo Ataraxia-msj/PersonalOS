@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import type { ManagedAccount } from "@/lib/finance/account-management-types";
-import type { Transaction } from "../types";
+import type { FinanceAnalysisPageData, Transaction } from "../types";
 import { AccountList } from "./account-list";
 import { SpendingAnalysis } from "./spending-analysis";
 import { TransactionList } from "./transaction-list";
@@ -18,6 +18,10 @@ const transactions: Transaction[] = [
   { accountId: "daily", accountName: "日常账户", amount: -3800, budgetLabel: "不计入预算", category: "居住", date: "2026-09-02", editable: true, excludedFromBudget: true, icon: "home", id: "rent", merchant: "房租" },
   { accountId: "daily", accountName: "日常账户", amount: 16800, budgetLabel: "未归入预算", category: "收入", date: "2026-09-01", editable: false, excludedFromBudget: false, icon: "briefcase", id: "salary", merchant: "工资" },
 ];
+const emptyAnalysis: FinanceAnalysisPageData = {
+  availableMonths: [], budgetSections: [], categories: [], currency: null, insights: [],
+  selectedMonth: null, summary: null, trend: [],
+};
 
 describe("Finance supporting sections", () => {
   it("filters transaction rows by merchant text", async () => {
@@ -69,27 +73,14 @@ describe("Finance supporting sections", () => {
     expect(screen.getByText("2026年9月 · 自由消费")).toBeVisible();
   });
 
-  it("renders account balances and View-backed monthly analysis", () => {
-    const { rerender } = render(<AccountList accounts={accounts} />);
+  it("renders account balances", () => {
+    render(<AccountList accounts={accounts} />);
     expect(screen.getByText("日常账户")).toBeVisible();
     expect(screen.getByText("¥21,480.20")).toBeVisible();
-
-    rerender(<SpendingAnalysis spending={[
-      { amount: 3500, category: "支出" },
-      { amount: 1800, category: "储蓄" },
-      { amount: 900, category: "投资" },
-      { amount: 200, category: "还款" },
-    ]} />);
-    expect(screen.getByRole("heading", { name: "月度资金分析" })).toBeVisible();
-    expect(screen.getByText("支出")).toBeVisible();
-    expect(screen.getByText("储蓄")).toBeVisible();
-    expect(screen.getByText("¥3,500")).toBeVisible();
-    expect(screen.queryByText("Agent 观察")).not.toBeInTheDocument();
-    expect(screen.queryByText(/mock/i)).not.toBeInTheDocument();
   });
 
   it("renders an honest analysis empty state when no monthly summary exists", () => {
-    render(<SpendingAnalysis spending={[]} />);
-    expect(screen.getByText("暂无月度汇总数据")).toBeVisible();
+    render(<SpendingAnalysis data={emptyAnalysis} />);
+    expect(screen.getByText("暂无可分析的月度财务数据")).toBeVisible();
   });
 });

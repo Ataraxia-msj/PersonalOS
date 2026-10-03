@@ -14,13 +14,16 @@ import {
   getExpenseCategories,
   getIncomeCategories,
   getExpenseTransactionForEdit,
+  getFinancialInsights,
+  getMonthlyCategorySpending,
+  getMonthlyFinancialAnalysis,
   getMonthlyFinancialSummaries,
   getNetWorth,
   getRecentTransactions,
   getTransactions,
   getTransactionAccountCurrencies,
 } from "./queries";
-import type { TransactionDetailView } from "./types";
+import type { MonthlyFinancialAnalysisView, TransactionDetailView } from "./types";
 import {
   getAccountsPageData,
   getAnalysisPageData,
@@ -46,6 +49,9 @@ vi.mock("./queries", () => ({
   getExpenseCategories: vi.fn(),
   getIncomeCategories: vi.fn(),
   getExpenseTransactionForEdit: vi.fn(),
+  getFinancialInsights: vi.fn(),
+  getMonthlyCategorySpending: vi.fn(),
+  getMonthlyFinancialAnalysis: vi.fn(),
   getMonthlyFinancialSummaries: vi.fn(),
   getNetWorth: vi.fn(),
   getRecentTransactions: vi.fn(),
@@ -87,6 +93,24 @@ const transactionLine = (
   ...overrides,
 });
 
+const analysisRow = (
+  overrides: Partial<MonthlyFinancialAnalysisView> = {},
+): MonthlyFinancialAnalysisView => ({
+  actual_income: 12000, actual_saving: 1800, actual_total_allocated: 6400,
+  actual_total_expense: 4100, balance_mom_change: 400, balance_mom_rate: 5.33,
+  balance_yoy_change: null, balance_yoy_rate: null, budget_period_id: "period-2026-09",
+  currency: "CNY", expense_mom_change: 100, expense_mom_rate: 2.5,
+  expense_yoy_change: null, expense_yoy_rate: null, income_mom_change: 1000,
+  income_mom_rate: 9.09, income_yoy_change: null, income_yoy_rate: null,
+  month: "2026-09-01", monthly_balance: 7900, net_worth_as_of: 180000,
+  net_worth_change: 3000, overall_execution_rate: 87.67, planned_total_allocated: 7300,
+  previous_month_balance: 7500, previous_month_execution_rate: 80,
+  previous_month_expense: 4000, previous_month_income: 11000,
+  previous_month_saving_rate: 12, prior_year_balance: null, prior_year_expense: null,
+  prior_year_income: null, saving_rate: 15, status: "active", summary_as_of: "2026-09-15",
+  ...overrides,
+});
+
 describe("Finance service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -112,6 +136,9 @@ describe("Finance service", () => {
     });
     vi.mocked(getActiveMonthlySummary).mockResolvedValue(null);
     vi.mocked(getMonthlyFinancialSummaries).mockResolvedValue([]);
+    vi.mocked(getMonthlyFinancialAnalysis).mockResolvedValue([]);
+    vi.mocked(getMonthlyCategorySpending).mockResolvedValue([]);
+    vi.mocked(getFinancialInsights).mockResolvedValue([]);
     vi.mocked(getRecentTransactions).mockResolvedValue([]);
     vi.mocked(getTransactions).mockResolvedValue([]);
     vi.mocked(getTransactionAccountCurrencies).mockResolvedValue([]);
@@ -200,46 +227,60 @@ describe("Finance service", () => {
     expect(getBudgetPeriods).toHaveBeenCalledWith(client);
   });
 
-  it("builds analysis rows from the active monthly summary View", async () => {
-    vi.mocked(getActiveMonthlySummary).mockResolvedValue({
-      actual_debt: 200,
-      actual_expense: 3500,
-      actual_income: 12000,
-      actual_investment: 900,
-      actual_saving: 1800,
-      actual_total_allocated: 6400,
-      actual_total_expense: 4100,
-      actual_unallocated: 0,
-      budget_period_id: "period-2026-09",
-      currency: "CNY",
-      end_date: "2026-09-30",
-      expense_variance: 500,
-      missing_current_snapshots: 0,
-      missing_start_snapshots: 0,
-      net_worth_as_of: 180000,
-      net_worth_change: 3000,
-      net_worth_start: 177000,
-      monthly_balance: 7900,
-      overall_execution_rate: 87.67,
-      planned_debt: 300,
-      planned_expense: 4000,
-      planned_income: 12000,
-      planned_investment: 1000,
-      planned_saving: 2000,
-      planned_total_allocated: 7300,
-      planned_unallocated: 4700,
-      saving_rate: 0.15,
-      start_date: "2026-09-01",
-      status: "active",
-      summary_as_of: "2026-09-15",
-    });
-
-    await expect(getAnalysisPageData()).resolves.toEqual([
-      { amount: 3500, category: "支出" },
-      { amount: 1800, category: "储蓄" },
-      { amount: 900, category: "投资" },
-      { amount: 200, category: "还款" },
+  it("uses the latest analysis month by default and loads its independent detail Views", async () => {
+    vi.mocked(getMonthlyFinancialAnalysis).mockResolvedValue([
+      analysisRow(),
+      analysisRow({ month: "2026-08-01", budget_period_id: "period-2026-08" }),
     ]);
+
+    const data = await getAnalysisPageData();
+
+    expect(data.selectedMonth).toBe("2026-09");
+    expect(data.availableMonths).toHaveLength(2);
+    expect(data.summary?.income.value).toBe(12000);
+    expect(getMonthlyCategorySpending).toHaveBeenCalledWith(client, "2026-09-01");
+    expect(getFinancialInsights).toHaveBeenCalledWith(client, "2026-09-01");
+    expect(getBudgetExecutionHistory).toHaveBeenCalledWith(client);
+    expect(createClient).toHaveBeenCalledOnce();
+  });
+
+  it("honors an explicit available month without silently substituting another month", async () => {
+    vi.mocked(getMonthlyFinancialAnalysis).mockResolvedValue([
+      analysisRow({ month: "2026-08-01", budget_period_id: "period-2026-08" }),
+    ]);
+    await expect(getAnalysisPageData("2026-08")).resolves.toMatchObject({ selectedMonth: "2026-08" });
+    expect(getMonthlyFinancialAnalysis).toHaveBeenCalledWith(client, "2026-08-01");
+
+    vi.mocked(getMonthlyFinancialAnalysis).mockResolvedValue([
+      analysisRow({ month: "2026-07-01", budget_period_id: "period-2026-07" }),
+    ]);
+    await expect(getAnalysisPageData("2026-08")).resolves.toMatchObject({ selectedMonth: null, summary: null });
+  });
+
+  it("starts independent selected-month reads together after resolving the month", async () => {
+    vi.mocked(getMonthlyFinancialAnalysis).mockResolvedValue([analysisRow()]);
+    let releaseCategories!: (value: never[]) => void;
+    let releaseInsights!: (value: never[]) => void;
+    let releaseExecution!: (value: never[]) => void;
+    vi.mocked(getMonthlyCategorySpending).mockImplementation(() => new Promise((resolve) => { releaseCategories = resolve; }));
+    vi.mocked(getFinancialInsights).mockImplementation(() => new Promise((resolve) => { releaseInsights = resolve; }));
+    vi.mocked(getBudgetExecutionHistory).mockImplementation(() => new Promise((resolve) => { releaseExecution = resolve; }));
+
+    const pending = getAnalysisPageData();
+    await vi.waitFor(() => {
+      expect(getMonthlyCategorySpending).toHaveBeenCalledOnce();
+      expect(getFinancialInsights).toHaveBeenCalledOnce();
+      expect(getBudgetExecutionHistory).toHaveBeenCalledOnce();
+    });
+    releaseCategories([]);
+    releaseInsights([]);
+    releaseExecution([]);
+    await pending;
+  });
+
+  it("does not swallow analysis View errors", async () => {
+    vi.mocked(getMonthlyFinancialAnalysis).mockRejectedValue(new Error("analysis denied"));
+    await expect(getAnalysisPageData()).rejects.toThrow("analysis denied");
   });
 
   it("loads independent expense form options through one server client", async () => {

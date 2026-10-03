@@ -26,7 +26,7 @@ const months: BudgetMonth[] = [
     actualTotal: 3600,
     editable: true,
     status: "active",
-    executionRate: null,
+    executionRate: 135.5,
     id: "period-2026-09",
     label: "2026年9月",
     plannedTotal: 6000,
@@ -76,7 +76,7 @@ const months: BudgetMonth[] = [
 describe("BudgetPage", () => {
   beforeEach(() => vi.mocked(getBudgetPageData).mockResolvedValue(months));
 
-  it("renders six real budget buckets in two sections and no invented overall rate", async () => {
+  it("renders six real budget buckets and the authoritative unclipped overall rate", async () => {
     render(await BudgetPage({}));
 
     expect(screen.getByRole("heading", { name: "消费预算" })).toBeVisible();
@@ -84,7 +84,7 @@ describe("BudgetPage", () => {
     for (const name of ["固定必要开销", "变动必要开销", "自由消费", "储蓄", "投资", "还款"]) {
       expect(screen.getByText(name)).toBeVisible();
     }
-    expect(screen.getByTestId("overall-execution-rate")).toHaveTextContent("—");
+    expect(screen.getByTestId("overall-execution-rate")).toHaveTextContent("135.5%");
   });
 
   it("switches a previous month into a read-only budget view", async () => {

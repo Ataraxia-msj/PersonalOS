@@ -106,6 +106,68 @@ export interface CategorySpending {
   amount: number;
 }
 
+export type AnalysisChangeTone = "favorable" | "adverse" | "neutral";
+
+export interface AnalysisComparison {
+  amount: number | null;
+  rate: number | null;
+  tone: AnalysisChangeTone;
+}
+
+export interface AnalysisMetric {
+  value: number | null;
+  mom: AnalysisComparison;
+  yoy: AnalysisComparison;
+}
+
+export interface AnalysisTrendPoint {
+  month: string;
+  label: string;
+  income: number;
+  expense: number;
+  balance: number;
+}
+
+export interface AnalysisCategory {
+  id: string;
+  name: string;
+  amount: number;
+  transactionCount: number;
+  share: number | null;
+  rank: number;
+}
+
+export interface AnalysisInsight {
+  id: string;
+  type: string;
+  severity: "reminder" | "warning";
+  title: string;
+  message: string;
+  metric: number | null;
+  threshold: number | null;
+}
+
+export interface FinanceAnalysisPageData {
+  availableMonths: Array<{ value: string; label: string }>;
+  selectedMonth: string | null;
+  currency: string | null;
+  summary: {
+    income: AnalysisMetric;
+    expense: AnalysisMetric;
+    balance: AnalysisMetric;
+    savingRate: number | null;
+    savingRateMom: number | null;
+    executionRate: number | null;
+    executionRateMom: number | null;
+    netWorth: number | null;
+    netWorthChange: number | null;
+  } | null;
+  trend: AnalysisTrendPoint[];
+  budgetSections: BudgetSection[];
+  categories: AnalysisCategory[];
+  insights: AnalysisInsight[];
+}
+
 export interface ExpenseAccountOption {
   id: string;
   name: string;

@@ -5,6 +5,10 @@ import {
   adaptBudgetMonths,
   adaptExpenseTransactionFormData,
   adaptIncomeTransactionFormData,
+  adaptAnalysisCategories,
+  adaptAnalysisInsights,
+  adaptAnalysisSummary,
+  adaptAnalysisTrend,
   adaptMonthlyAnalysis,
   adaptMonthlyCashflow,
   adaptNetWorth,
@@ -13,6 +17,9 @@ import {
 import type {
   AccountBalanceView,
   BudgetExecutionView,
+  FinancialInsightView,
+  MonthlyCategorySpendingView,
+  MonthlyFinancialAnalysisView,
   MonthlyFinancialSummaryView,
   NetWorthView,
   TransactionDetailView,
@@ -108,6 +115,22 @@ const bucket = (name: string, kind: BudgetExecutionView["bucket_kind"], order: n
   start_date: "2026-09-01",
 });
 
+const analysis = (overrides: Partial<MonthlyFinancialAnalysisView> = {}): MonthlyFinancialAnalysisView => ({
+  actual_income: 12000, actual_saving: 1800, actual_total_allocated: 6400,
+  actual_total_expense: 4200, balance_mom_change: 300, balance_mom_rate: 4,
+  balance_yoy_change: null, balance_yoy_rate: null, budget_period_id: "period-2026-09",
+  currency: "CNY", expense_mom_change: 200, expense_mom_rate: 5,
+  expense_yoy_change: null, expense_yoy_rate: null, income_mom_change: 1000,
+  income_mom_rate: 9.09, income_yoy_change: null, income_yoy_rate: null,
+  month: "2026-09-01", monthly_balance: 7800, net_worth_as_of: 180000,
+  net_worth_change: 3000, overall_execution_rate: 87.67, planned_total_allocated: 7300,
+  previous_month_balance: 7500, previous_month_execution_rate: 80,
+  previous_month_expense: 4000, previous_month_income: 11000,
+  previous_month_saving_rate: 12, prior_year_balance: null, prior_year_expense: null,
+  prior_year_income: null, saving_rate: 15, status: "active", summary_as_of: "2026-09-15",
+  ...overrides,
+});
+
 describe("Finance View adapters", () => {
   it("shows independently saved classification before a monthly budget exists", () => {
     const [transaction] = adaptTransactions([transactionLine({
@@ -182,6 +205,41 @@ describe("Finance View adapters", () => {
     ]);
   });
 
+  it("maps nullable comparisons with meaning-aware income and expense tones", () => {
+    const model = adaptAnalysisSummary(analysis());
+    expect(model?.income.mom).toEqual({ amount: 1000, rate: 9.09, tone: "favorable" });
+    expect(model?.expense.mom).toEqual({ amount: 200, rate: 5, tone: "adverse" });
+    expect(model?.income.yoy).toEqual({ amount: null, rate: null, tone: "neutral" });
+    expect(model?.executionRate).toBe(87.67);
+  });
+
+  it("sorts a maximum of twelve trend points in natural-month order", () => {
+    const rows = Array.from({ length: 13 }, (_, index) => {
+      const date = new Date(Date.UTC(2025, index, 1));
+      return analysis({ month: date.toISOString().slice(0, 10), actual_income: index });
+    });
+    const trend = adaptAnalysisTrend(rows);
+    expect(trend).toHaveLength(12);
+    expect(trend[0]).toMatchObject({ month: "2025-02-01", income: 1 });
+    expect(trend.at(-1)).toMatchObject({ month: "2026-01-01", income: 12 });
+  });
+
+  it("preserves database category rank and orders warning insights before reminders", () => {
+    const categories: MonthlyCategorySpendingView[] = [{
+      actual_amount: 618, category_id: "paper", category_name: "学习", currency: "CNY",
+      month: "2026-09-01", month_rank: 2, month_share: 40, transaction_count: 1,
+    }];
+    const insight = (severity: FinancialInsightView["severity"], key: string): FinancialInsightView => ({
+      currency: "CNY", insight_key: key, insight_type: "budget", message: key,
+      metric_value: 101, month: "2026-09-01", related_budget_bucket_id: null,
+      related_budget_period_id: null, related_category_id: null, related_entry_id: null,
+      severity, threshold_value: 100, title: key,
+    });
+    expect(adaptAnalysisCategories(categories)[0]).toMatchObject({ name: "学习", rank: 2, share: 40 });
+    expect(adaptAnalysisInsights([insight("reminder", "b"), insight("warning", "a")]).map((row) => row.id))
+      .toEqual(["a", "b"]);
+  });
+
   it("places all six buckets into two regions and preserves database execution rates", () => {
     const rows = [
       bucket("固定必要开销", "expense", 1),
@@ -202,7 +260,20 @@ describe("Finance View adapters", () => {
       { title: "资金安排", categories: ["储蓄", "投资", "还款"] },
     ]);
     expect(month.sections[0].categories[0].executionRate).toBe(0.43);
-    expect(month.executionRate).toBeNull();
+    expect(month.executionRate).toBe(87.67);
+    expect(month.actualTotal).toBe(6400);
+  });
+
+  it.each([
+    [null, null],
+    [0, 0],
+    [100, 100],
+    [135.5, 135.5],
+  ] as const)("preserves database overall execution %s without clipping or recomputing it", (databaseRate, expected) => {
+    const [month] = adaptBudgetMonths([bucket("固定必要开销", "expense", 1)], [summary({
+      overall_execution_rate: databaseRate,
+    })]);
+    expect(month.executionRate).toBe(expected);
   });
 
   it("orders budget periods by start date instead of opaque period ids", () => {

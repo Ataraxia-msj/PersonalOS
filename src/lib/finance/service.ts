@@ -2,7 +2,7 @@ import type {
   Account,
   BudgetMonth,
   BudgetFormData,
-  CategorySpending,
+  FinanceAnalysisPageData,
   ExpenseTransactionFormData,
   IncomeTransactionFormData,
   IncomeTransactionEditData,
@@ -15,10 +15,13 @@ import { createClient } from "@/lib/supabase/server";
 
 import {
   adaptAccountBalances,
+  adaptAnalysisCategories,
+  adaptAnalysisInsights,
+  adaptAnalysisSummary,
+  adaptAnalysisTrend,
   adaptBudgetMonths,
   adaptExpenseTransactionFormData,
   adaptIncomeTransactionFormData,
-  adaptMonthlyAnalysis,
   adaptMonthlyCashflow,
   adaptNetWorth,
   adaptTransactions,
@@ -32,10 +35,13 @@ import {
   getActiveMonthlySummary,
   getBudgetExecutionHistory,
   getExpenseCategories,
+  getFinancialInsights,
   getIncomeCategories,
   getIncomeTransactionForEdit,
   getExpenseTransactionForEdit,
   getMonthlyFinancialSummaries,
+  getMonthlyCategorySpending,
+  getMonthlyFinancialAnalysis,
   getNetWorth,
   getRecentTransactions,
   getTransactions,
@@ -98,9 +104,48 @@ export async function getTransactionsPageData(): Promise<{
   return { transactions: adaptTransactions(lines, currencies) };
 }
 
-export async function getAnalysisPageData(): Promise<CategorySpending[]> {
+export async function getAnalysisPageData(month?: string): Promise<FinanceAnalysisPageData> {
   const client = await createClient();
-  return adaptMonthlyAnalysis(await getActiveMonthlySummary(client));
+  const monthStart = month ? `${month}-01` : undefined;
+  const analysisRows = await getMonthlyFinancialAnalysis(client, monthStart);
+  const selected = monthStart
+    ? analysisRows.find((row) => row.month === monthStart) ?? null
+    : analysisRows[0] ?? null;
+  const availableMonths = analysisRows.map((row) => ({
+    label: `${row.month.slice(0, 4)}年${Number(row.month.slice(5, 7))}月`,
+    value: row.month.slice(0, 7),
+  }));
+  if (!selected) {
+    return {
+      availableMonths,
+      budgetSections: [],
+      categories: [],
+      currency: null,
+      insights: [],
+      selectedMonth: null,
+      summary: null,
+      trend: adaptAnalysisTrend(analysisRows),
+    };
+  }
+  const [categories, insights, execution] = await Promise.all([
+    getMonthlyCategorySpending(client, selected.month),
+    getFinancialInsights(client, selected.month),
+    getBudgetExecutionHistory(client),
+  ]);
+  const budget = adaptBudgetMonths(
+    execution.filter((row) => row.budget_period_id === selected.budget_period_id),
+    [],
+  )[0];
+  return {
+    availableMonths,
+    budgetSections: budget?.sections ?? [],
+    categories: adaptAnalysisCategories(categories),
+    currency: selected.currency,
+    insights: adaptAnalysisInsights(insights),
+    selectedMonth: selected.month.slice(0, 7),
+    summary: adaptAnalysisSummary(selected),
+    trend: adaptAnalysisTrend(analysisRows),
+  };
 }
 
 export async function getExpenseTransactionFormData(): Promise<ExpenseTransactionFormData> {
