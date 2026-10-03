@@ -1,6 +1,6 @@
 import { moneyToCents } from "./budget-validation";
 import { reconciliationUuid, shanghaiDateTime } from "./reconciliation-validation";
-import type { TransferArgs, TransferPurpose } from "./transfer-types";
+import type { TransferArgs, TransferFormData, TransferPurpose, UpdateTransferArgs } from "./transfer-types";
 
 export function validateTransferInput(data: FormData, now = new Date()): {
   args: TransferArgs | null; errors: Record<string, string>;
@@ -36,4 +36,41 @@ export function validateTransferInput(data: FormData, now = new Date()): {
     p_occurred_at: date.toISOString(), p_amount: cents! / 100, p_description: description,
     p_budget_bucket_id: bucket, p_memo: memo,
   } };
+}
+
+export function validateTransferUpdateInput(
+  data: FormData,
+  options: TransferFormData,
+  now = new Date(),
+): { args: UpdateTransferArgs | null; errors: Record<string, string> } {
+  const createShape = new FormData();
+  data.forEach((value, key) => createShape.append(key, value));
+  createShape.set("requestId", "00000000-0000-4000-8000-000000000001");
+  const base = validateTransferInput(createShape, now);
+  const errors = { ...base.errors };
+  const entryId = typeof data.get("entryId") === "string"
+    ? String(data.get("entryId")).trim().toLowerCase()
+    : "";
+  if (!reconciliationUuid.test(entryId)) errors.entryId = "交易标识无效。";
+
+  if (base.args) {
+    const from = options.accounts.find((account) => account.id === base.args?.p_from_account_id);
+    const to = options.accounts.find((account) => account.id === base.args?.p_to_account_id);
+    if (!from || from.accountClass !== "asset") errors.fromAccountId = "请选择有效的资产转出账户。";
+    if (!to || to.accountClass !== (base.args.p_purpose === "debt" ? "liability" : "asset")) {
+      errors.toAccountId = base.args.p_purpose === "debt" ? "请选择有效的负债账户。" : "请选择有效的资产转入账户。";
+    } else if (from && from.currency !== to.currency) {
+      errors.toAccountId = "转入与转出账户必须使用相同币种。";
+    }
+    if (base.args.p_budget_bucket_id) {
+      const bucket = options.budgetBuckets.find((item) => item.id === base.args?.p_budget_bucket_id);
+      if (!bucket || bucket.kind !== base.args.p_purpose) {
+        errors.budgetBucketId = "预算分类与转账用途不匹配。";
+      }
+    }
+  }
+
+  if (!base.args || Object.keys(errors).length > 0) return { args: null, errors };
+  const { p_request_id: _requestId, ...editable } = base.args;
+  return { args: { ...editable, p_entry_id: entryId }, errors };
 }

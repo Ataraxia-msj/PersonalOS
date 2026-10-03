@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { adaptTransactions } from "./adapters";
-import { validateTransferInput } from "./transfer-validation";
+import { validateTransferInput, validateTransferUpdateInput } from "./transfer-validation";
 import type { TransactionDetailView } from "./types";
 import { formatTransactionAmount } from "@/features/finance/format";
+import { updateTransferTransaction } from "./transfer-mutations";
 
 const ids = [1, 2, 3, 4].map((n) => `00000000-0000-0000-0000-${String(n).padStart(12, "0")}`);
 export function transferForm(overrides: Record<string, string> = {}) {
@@ -34,6 +35,65 @@ describe("transfer input", () => {
   });
   it("allows contribution without a bucket for explicit warning at save", () => {
     expect(validateTransferInput(transferForm({ purpose: "saving" })).args?.p_budget_bucket_id).toBeNull();
+  });
+  it("normalizes update identity and validates purpose-specific account and bucket options", () => {
+    const form = transferForm({ requestId: ids[3], purpose: "saving", budgetBucketId: ids[3], memo: "储蓄备注" });
+    form.set("entryId", ids[0]);
+    const result = validateTransferUpdateInput(form, {
+      accounts: [
+        { id: ids[1], name: "来源", accountClass: "asset", currency: "CNY", balance: 1, institution: null },
+        { id: ids[2], name: "目标", accountClass: "asset", currency: "CNY", balance: 2, institution: null },
+      ],
+      budgetBuckets: [{ id: ids[3], name: "储蓄", kind: "saving" }],
+    }, new Date("2026-09-08T00:00Z"));
+    expect(result.args).toMatchObject({
+      p_entry_id: ids[0], p_from_account_id: ids[1], p_to_account_id: ids[2],
+      p_purpose: "saving", p_budget_bucket_id: ids[3], p_memo: "储蓄备注",
+    });
+    expect(result.args).not.toHaveProperty("p_request_id");
+  });
+  it("rejects update identity, wrong account direction/currency and incompatible bucket purpose", () => {
+    const options = {
+      accounts: [
+        { id: ids[1], name: "来源", accountClass: "liability" as const, currency: "CNY", balance: 1, institution: null },
+        { id: ids[2], name: "目标", accountClass: "asset" as const, currency: "USD", balance: 2, institution: null },
+      ],
+      budgetBuckets: [{ id: ids[3], name: "投资", kind: "investment" as const }],
+    };
+    const form = transferForm({ purpose: "saving", budgetBucketId: ids[3] });
+    form.set("entryId", "bad");
+    const result = validateTransferUpdateInput(form, options, new Date("2026-09-08T00:00Z"));
+    expect(result.args).toBeNull();
+    expect(result.errors).toEqual(expect.objectContaining({
+      budgetBucketId: expect.any(String), entryId: expect.any(String),
+      fromAccountId: expect.any(String), toAccountId: expect.any(String),
+    }));
+  });
+});
+
+describe("transfer update mutation", () => {
+  it("calls the update RPC with exact names and confirms its single typed result", async () => {
+    const args = {
+      p_entry_id: ids[0], p_occurred_at: "2026-09-07T15:00:00.000Z", p_description: "调拨",
+      p_from_account_id: ids[1], p_to_account_id: ids[2], p_amount: 123.45,
+      p_purpose: "saving" as const, p_budget_bucket_id: ids[3], p_memo: "备注",
+    };
+    const row = { entry_id: ids[0], from_line_id: ids[1], to_line_id: ids[2],
+      budget_impact_created: true, budget_period_id: ids[3], budget_bucket_id: ids[3], warning_code: null };
+    const rpc = vi.fn().mockResolvedValue({ data: [row], error: null });
+    await expect(updateTransferTransaction({ rpc } as never, args)).resolves.toEqual(row);
+    expect(rpc).toHaveBeenCalledExactlyOnceWith("update_transfer_transaction", args);
+  });
+
+  it("propagates update errors and treats malformed success as unconfirmed", async () => {
+    const args = { p_entry_id: ids[0], p_occurred_at: "2026-09-07T15:00:00.000Z", p_description: "调拨",
+      p_from_account_id: ids[1], p_to_account_id: ids[2], p_amount: 123.45,
+      p_purpose: "general" as const, p_budget_bucket_id: null, p_memo: null };
+    await expect(updateTransferTransaction({ rpc: vi.fn().mockResolvedValue({ data: null,
+      error: { code: "P0001", message: "transfer_entry_not_editable" } }) } as never, args))
+      .rejects.toThrow("transfer_entry_not_editable");
+    await expect(updateTransferTransaction({ rpc: vi.fn().mockResolvedValue({ data: [], error: null }) } as never, args))
+      .rejects.toThrow("Unconfirmed transfer update response");
   });
 });
 

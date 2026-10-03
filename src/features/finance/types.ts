@@ -146,6 +146,21 @@ export interface IncomeTransactionFormData {
   categories: Array<{ id: string; name: string }>;
 }
 
+export interface IncomeTransactionInitialValues {
+  entryId: string;
+  occurredAt: string;
+  amount: number;
+  accountId: string;
+  categoryId: string;
+  description: string;
+  memo: string;
+}
+
+export interface IncomeTransactionEditData {
+  formData: IncomeTransactionFormData;
+  initialValues: IncomeTransactionInitialValues;
+}
+
 export interface BudgetFormData {
   period: { id: string; month: string; income: number; updatedAt: string; status: "draft" | "active" | "closed"; currency: string } | null;
   periods: Array<{ id: string; startDate: string; endDate: string }>;

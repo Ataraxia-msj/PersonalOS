@@ -9,7 +9,9 @@ import {
   getBudgetPeriods,
   getExpenseCategories,
   getIncomeCategories,
+  getIncomeTransactionForEdit,
   getExpenseTransactionForEdit,
+  getTransferTransactionForEdit,
   getMonthlyFinancialSummaries,
   getNetWorth,
   getRecentTransactions,
@@ -196,6 +198,31 @@ describe("Finance View queries", () => {
     expect(from).toHaveBeenCalledWith("budget_impacts");
     expect(calls).toContainEqual(["vw_transaction_details.eq", "entry_id", "entry-edit"]);
     expect(calls).toContainEqual(["budget_impacts.eq", "entry_id", "entry-edit"]);
+    expect(calls).toContainEqual(["budget_impacts.limit", 2]);
+  });
+
+  it.each([
+    ["income", getIncomeTransactionForEdit],
+    ["transfer", getTransferTransactionForEdit],
+  ] as const)("loads one %s entry and at most two impacts through the shared typed query", async (_type, read) => {
+    const calls: Array<[string, ...unknown[]]> = [];
+    const from = vi.fn((table: string) => {
+      const result = table === "vw_transaction_details"
+        ? { data: [{ entry_id: "entry-edit" }], error: null }
+        : { data: [], error: null };
+      const chain = {
+        eq: vi.fn((...args: unknown[]) => { calls.push([`${table}.eq`, ...args]); return chain; }),
+        limit: vi.fn((...args: unknown[]) => { calls.push([`${table}.limit`, ...args]); return chain; }),
+        order: vi.fn((...args: unknown[]) => { calls.push([`${table}.order`, ...args]); return chain; }),
+        select: vi.fn((...args: unknown[]) => { calls.push([`${table}.select`, ...args]); return chain; }),
+        then: (resolve: (value: typeof result) => unknown) => Promise.resolve(result).then(resolve),
+      };
+      return chain;
+    });
+    await expect(read({ from } as unknown as FinanceQueryClient, "entry-edit")).resolves.toEqual({
+      budgetImpacts: [], transactionLines: [{ entry_id: "entry-edit" }],
+    });
+    expect(calls).toContainEqual(["vw_transaction_details.eq", "entry_id", "entry-edit"]);
     expect(calls).toContainEqual(["budget_impacts.limit", 2]);
   });
 

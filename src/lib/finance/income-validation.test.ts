@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { validateIncomeInput } from "./income-validation";
+import { validateIncomeInput, validateIncomeUpdateInput } from "./income-validation";
 
 function validFormData() {
   const data = new FormData();
@@ -49,5 +49,34 @@ describe("validateIncomeInput", () => {
       occurredAt: expect.any(String),
       requestId: expect.any(String),
     }));
+  });
+
+  it("normalizes an update without accepting create request identity as the entry id", () => {
+    const data = validFormData();
+    data.set("entryId", "80000000-0000-0000-0000-000000000001");
+    data.set("requestId", "70000000-0000-0000-0000-000000000001");
+    data.set("memo", "税后工资");
+    expect(validateIncomeUpdateInput(data, new Date("2026-09-15T10:00:00+08:00"))).toEqual({
+      errors: {},
+      input: {
+        accountId: "10000000-0000-0000-0000-000000000001",
+        amount: 8500.25,
+        categoryId: "30000000-0000-0000-0000-000000000001",
+        description: "九月工资",
+        entryId: "80000000-0000-0000-0000-000000000001",
+        memo: "税后工资",
+        occurredAt: "2026-09-15T01:00:00.000Z",
+        rawText: null,
+      },
+    });
+  });
+
+  it("rejects an invalid update entry id and oversized memo", () => {
+    const data = validFormData();
+    data.set("entryId", "not-an-entry");
+    data.set("memo", "字".repeat(1001));
+    const result = validateIncomeUpdateInput(data, new Date("2026-09-15T10:00:00+08:00"));
+    expect(result.input).toBeNull();
+    expect(result.errors).toEqual(expect.objectContaining({ entryId: expect.any(String), memo: expect.any(String) }));
   });
 });

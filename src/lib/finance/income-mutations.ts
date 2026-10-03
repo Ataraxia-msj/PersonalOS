@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { CreateIncomeTransactionArgs, Database } from "./types";
+import type { CreateIncomeTransactionArgs, Database, UpdateIncomeTransactionArgs } from "./types";
 
 export type IncomeMutationClient = SupabaseClient<Database>;
 
@@ -19,6 +19,15 @@ export interface CreateIncomeTransactionResult {
   entryId: string;
   lineId: string;
   replayed: boolean;
+}
+
+export type UpdateIncomeTransactionInput = Omit<CreateIncomeTransactionInput, "requestId"> & {
+  entryId: string;
+};
+
+export interface UpdateIncomeTransactionResult {
+  entryId: string;
+  lineId: string;
 }
 
 export class IncomeMutationError extends Error {
@@ -58,4 +67,25 @@ export async function createIncomeTransaction(
     lineId: row.line_id,
     replayed: row.replayed,
   };
+}
+
+export async function updateIncomeTransaction(
+  client: IncomeMutationClient,
+  input: UpdateIncomeTransactionInput,
+): Promise<UpdateIncomeTransactionResult> {
+  const args: UpdateIncomeTransactionArgs = {
+    p_account_id: input.accountId,
+    p_amount: input.amount,
+    p_category_id: input.categoryId,
+    p_description: input.description,
+    p_entry_id: input.entryId,
+    p_memo: input.memo,
+    p_occurred_at: input.occurredAt,
+    p_raw_text: input.rawText,
+  };
+  const { data, error } = await client.rpc("update_income_transaction", args);
+  if (error) throw new IncomeMutationError(error.message, error.code ?? null);
+  const row = data?.[0];
+  if (!row) throw new IncomeMutationError("update_income_transaction returned no result");
+  return { entryId: row.entry_id, lineId: row.line_id };
 }

@@ -1,5 +1,5 @@
 import type { BalanceSnapshotRow, ReconciliationPreviewRow, ReconciliationResult, ReconciliationSaveArgs } from "./reconciliation-types";
-import type { TransferArgs, TransferPurpose, TransferResult } from "./transfer-types";
+import type { TransferArgs, TransferPurpose, TransferResult, UpdateTransferArgs, UpdateTransferResult } from "./transfer-types";
 
 export type AccountClass = "asset" | "liability";
 
@@ -313,6 +313,15 @@ export type CreateIncomeTransactionRow = {
   replayed: boolean;
 };
 
+export type UpdateIncomeTransactionArgs = Omit<CreateIncomeTransactionArgs, "p_request_id"> & {
+  p_entry_id: string;
+};
+
+export type UpdateIncomeTransactionRow = {
+  entry_id: string;
+  line_id: string;
+};
+
 type ViewDefinition<Row> = {
   Row: Row & Record<string, unknown>;
   Relationships: [];
@@ -355,7 +364,12 @@ export interface Database {
         Args: CreateIncomeTransactionArgs;
         Returns: CreateIncomeTransactionRow[];
       };
+      update_income_transaction: {
+        Args: UpdateIncomeTransactionArgs;
+        Returns: UpdateIncomeTransactionRow[];
+      };
       create_transfer_transaction: { Args: TransferArgs; Returns: TransferResult[] };
+      update_transfer_transaction: { Args: UpdateTransferArgs; Returns: UpdateTransferResult[] };
       preview_balance_reconciliation: { Args: { p_account_id: string; p_snapshot_at: string }; Returns: ReconciliationPreviewRow[] };
       reconcile_account_balance: { Args: ReconciliationSaveArgs; Returns: ReconciliationResult[] };
       save_monthly_budget: { Args: SaveMonthlyBudgetArgs; Returns: SaveMonthlyBudgetRow[] };

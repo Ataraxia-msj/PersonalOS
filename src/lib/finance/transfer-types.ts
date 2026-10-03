@@ -25,6 +25,8 @@ export interface TransferResult {
   warning_code: string | null;
   replayed: boolean;
 }
+export type UpdateTransferArgs = Omit<TransferArgs, "p_request_id"> & { p_entry_id: string };
+export type UpdateTransferResult = Omit<TransferResult, "replayed">;
 export interface TransferActionState {
   status: "error" | "uncertain" | "success";
   message: string;
@@ -34,4 +36,20 @@ export interface TransferActionState {
 export interface TransferFormData {
   accounts: ExpenseAccountOption[];
   budgetBuckets: ExpenseBudgetBucketOption[];
+}
+export interface TransferTransactionInitialValues {
+  entryId: string;
+  occurredAt: string;
+  amount: number;
+  fromAccountId: string;
+  toAccountId: string;
+  purpose: TransferPurpose;
+  budgetBucketId: string;
+  description: string;
+  memo: string;
+  budgetLocked: boolean;
+}
+export interface TransferTransactionEditData {
+  formData: TransferFormData;
+  initialValues: TransferTransactionInitialValues;
 }

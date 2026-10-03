@@ -1,4 +1,4 @@
-import type { CreateIncomeTransactionInput } from "./income-mutations";
+import type { CreateIncomeTransactionInput, UpdateIncomeTransactionInput } from "./income-mutations";
 import { moneyToCents } from "./budget-validation";
 import { reconciliationUuid, shanghaiDateTime } from "./reconciliation-validation";
 
@@ -39,9 +39,11 @@ export function validateIncomeInput(
   }
 
   const description = value("description");
+  const memo = value("memo") || null;
   if (!description || [...description].length > 1000) {
     errors.description = "请填写 1–1000 个字符的描述。";
   }
+  if (memo && [...memo].length > 1000) errors.memo = "备注不能超过 1000 个字符。";
 
   return {
     errors,
@@ -50,10 +52,34 @@ export function validateIncomeInput(
       amount: cents! / 100,
       categoryId,
       description,
-      memo: null,
+      memo,
       occurredAt: occurredAt.toISOString(),
       rawText: null,
       requestId,
     },
   };
+}
+
+export interface IncomeUpdateValidationResult {
+  input: UpdateIncomeTransactionInput | null;
+  errors: Record<string, string>;
+}
+
+export function validateIncomeUpdateInput(
+  data: FormData,
+  now = new Date(),
+): IncomeUpdateValidationResult {
+  const createShape = new FormData();
+  data.forEach((value, key) => createShape.append(key, value));
+  createShape.set("requestId", "00000000-0000-4000-8000-000000000001");
+  const base = validateIncomeInput(createShape, now);
+  const entryId = typeof data.get("entryId") === "string"
+    ? String(data.get("entryId")).trim().toLowerCase()
+    : "";
+  const errors = { ...base.errors };
+  // Update identity is immutable and never sourced from a create request id.
+  if (!reconciliationUuid.test(entryId)) errors.entryId = "交易标识无效。";
+  if (!base.input || Object.keys(errors).length > 0) return { errors, input: null };
+  const { requestId: _requestId, ...editable } = base.input;
+  return { errors, input: { ...editable, entryId } };
 }

@@ -188,10 +188,12 @@ export interface ExpenseTransactionEditRows {
   budgetImpacts: BudgetImpactRow[];
 }
 
-export async function getExpenseTransactionForEdit(
+export type TransactionEditRows = ExpenseTransactionEditRows;
+
+async function getTransactionForEdit(
   client: FinanceQueryClient,
   entryId: string,
-): Promise<ExpenseTransactionEditRows> {
+): Promise<TransactionEditRows> {
   const [transactionResult, impactResult] = await Promise.all([
     client
       .from("vw_transaction_details")
@@ -214,4 +216,25 @@ export async function getExpenseTransactionForEdit(
       transactionResult.error,
     ),
   };
+}
+
+export async function getExpenseTransactionForEdit(
+  client: FinanceQueryClient,
+  entryId: string,
+): Promise<ExpenseTransactionEditRows> {
+  return getTransactionForEdit(client, entryId);
+}
+
+export async function getIncomeTransactionForEdit(
+  client: FinanceQueryClient,
+  entryId: string,
+): Promise<TransactionEditRows> {
+  return getTransactionForEdit(client, entryId);
+}
+
+export async function getTransferTransactionForEdit(
+  client: FinanceQueryClient,
+  entryId: string,
+): Promise<TransactionEditRows> {
+  return getTransactionForEdit(client, entryId);
 }

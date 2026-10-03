@@ -5,10 +5,12 @@ import type {
   CategorySpending,
   ExpenseTransactionFormData,
   IncomeTransactionFormData,
+  IncomeTransactionEditData,
   ExpenseTransactionEditData,
   FinanceOverviewData,
   Transaction,
 } from "@/features/finance/types";
+import type { TransferTransactionEditData, TransferPurpose } from "./transfer-types";
 import { createClient } from "@/lib/supabase/server";
 
 import {
@@ -31,12 +33,14 @@ import {
   getBudgetExecutionHistory,
   getExpenseCategories,
   getIncomeCategories,
+  getIncomeTransactionForEdit,
   getExpenseTransactionForEdit,
   getMonthlyFinancialSummaries,
   getNetWorth,
   getRecentTransactions,
   getTransactions,
   getTransactionAccountCurrencies,
+  getTransferTransactionForEdit,
 } from "./queries";
 import { shanghaiDate } from "./budget-validation";
 
@@ -171,6 +175,98 @@ export async function getExpenseTransactionEditData(
       entryId: primaryLine.entry_id,
       excludeFromBudget: primaryLine.exclude_from_budget,
       occurredAt: formatShanghaiDateTimeLocal(primaryLine.occurred_at),
+    },
+  };
+}
+
+export async function getIncomeTransactionEditData(
+  entryId: string,
+): Promise<IncomeTransactionEditData | null> {
+  const client = await createClient();
+  const [editRows, accounts, categories] = await Promise.all([
+    getIncomeTransactionForEdit(client, entryId),
+    getAccountBalances(client),
+    getIncomeCategories(client),
+  ]);
+  const [line] = editRows.transactionLines;
+  if (editRows.transactionLines.length !== 1 || editRows.budgetImpacts.length !== 0 || !line
+    || line.entry_id !== entryId || line.entry_type !== "income" || line.source !== "manual"
+    || line.status !== "confirmed" || line.related_entry_id !== null || line.exclude_from_budget
+    || line.transfer_purpose != null || line.line_sort_order !== 0 || line.amount <= 0
+    || line.account_class !== "asset" || line.category_type !== "income" || !line.category_id
+    || line.saved_budget_bucket_id !== null || line.budget_bucket_id !== null) {
+    return null;
+  }
+  return {
+    formData: adaptIncomeTransactionFormData(accounts, categories),
+    initialValues: {
+      accountId: line.account_id,
+      amount: line.amount,
+      categoryId: line.category_id,
+      description: line.description,
+      entryId: line.entry_id,
+      memo: line.memo ?? "",
+      occurredAt: formatShanghaiDateTimeLocal(line.occurred_at),
+    },
+  };
+}
+
+const transferPurposes = new Set<TransferPurpose>(["general", "saving", "investment", "debt"]);
+
+export async function getTransferTransactionEditData(
+  entryId: string,
+): Promise<TransferTransactionEditData | null> {
+  const client = await createClient();
+  const [editRows, accounts, buckets, periods] = await Promise.all([
+    getTransferTransactionForEdit(client, entryId),
+    getAccountBalances(client),
+    getBudgetBuckets(client),
+    getBudgetPeriods(client),
+  ]);
+  const ordered = editRows.transactionLines.toSorted((left, right) => left.line_sort_order - right.line_sort_order);
+  const [from, to] = ordered;
+  const purpose = from?.transfer_purpose ?? null;
+  const impact = editRows.budgetImpacts[0] ?? null;
+  if (ordered.length !== 2 || editRows.budgetImpacts.length > 1 || !from || !to
+    || from.entry_id !== entryId || to.entry_id !== entryId || from.entry_type !== "transfer"
+    || to.entry_type !== "transfer" || from.source !== "manual" || to.source !== "manual"
+    || from.status !== "confirmed" || to.status !== "confirmed" || from.related_entry_id !== null
+    || to.related_entry_id !== null || !purpose || !transferPurposes.has(purpose)
+    || to.transfer_purpose !== purpose || from.line_sort_order !== 0 || to.line_sort_order !== 1
+    || from.account_class !== "asset" || to.account_class !== (purpose === "debt" ? "liability" : "asset")
+    || from.account_id === to.account_id || from.amount >= 0
+    || to.amount !== (purpose === "debt" ? from.amount : -from.amount)
+    || from.category_id !== null || to.category_id !== null || to.saved_budget_bucket_id !== null
+    || from.memo !== to.memo || from.description !== to.description
+    || (purpose === "general" && (!from.exclude_from_budget || !to.exclude_from_budget || from.saved_budget_bucket_id !== null))
+    || (purpose !== "general" && (from.exclude_from_budget || to.exclude_from_budget))
+    || (impact && (impact.line_id !== from.line_id
+      || impact.budget_bucket_id !== from.saved_budget_bucket_id || impact.amount !== -from.amount))) {
+    return null;
+  }
+  const impactPeriod = impact ? periods.find((period) => period.id === impact.budget_period_id) : null;
+  return {
+    formData: {
+      accounts: accounts.map((account) => ({
+        accountClass: account.account_class, balance: account.estimated_balance,
+        currency: account.currency, id: account.account_id, institution: account.institution,
+        name: account.account_name,
+      })),
+      budgetBuckets: buckets
+        .filter((bucket) => bucket.is_active && ["saving", "investment", "debt"].includes(bucket.bucket_kind))
+        .map((bucket) => ({ id: bucket.id, kind: bucket.bucket_kind, name: bucket.name })),
+    },
+    initialValues: {
+      amount: Math.abs(from.amount),
+      budgetBucketId: from.saved_budget_bucket_id ?? impact?.budget_bucket_id ?? "",
+      budgetLocked: impactPeriod?.status === "closed",
+      description: from.description,
+      entryId: from.entry_id,
+      fromAccountId: from.account_id,
+      memo: from.memo ?? "",
+      occurredAt: formatShanghaiDateTimeLocal(from.occurred_at),
+      purpose,
+      toAccountId: to.account_id,
     },
   };
 }
