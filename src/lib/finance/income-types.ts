@@ -1,10 +1,10 @@
-import type { CreateIncomeTransactionResult } from "./income-mutations";
+import type { CreateIncomeTransactionResult, UpdateIncomeTransactionResult } from "./income-mutations";
 
 export interface IncomeActionState {
   status: "success" | "error";
   message: string;
   errors: Record<string, string>;
-  result: CreateIncomeTransactionResult | null;
+  result: CreateIncomeTransactionResult | UpdateIncomeTransactionResult | null;
 }
 
 export const initialIncomeActionState: IncomeActionState = {
