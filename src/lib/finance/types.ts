@@ -122,6 +122,24 @@ export type SetAccountActiveRow = {
   is_active: boolean;
 };
 
+export type CategoryType = "expense" | "income";
+export type CreateCategoryArgs = {
+  p_request_id: string;
+  p_name: string;
+  p_category_type: CategoryType;
+  p_default_budget_bucket_id: string | null;
+  p_sort_order: number;
+  p_note: string | null;
+};
+export type CreateCategoryRow = { category_id: string; category_updated_at: string; replayed: boolean };
+export type UpdateCategoryArgs = Omit<CreateCategoryArgs, "p_request_id"> & {
+  p_category_id: string;
+  p_expected_updated_at: string;
+};
+export type UpdateCategoryRow = { category_id: string; category_updated_at: string; type_locked: boolean };
+export type SetCategoryActiveArgs = { p_category_id: string; p_expected_updated_at: string; p_is_active: boolean };
+export type SetCategoryActiveRow = { category_id: string; category_updated_at: string; is_active: boolean };
+
 export interface BudgetExecutionView {
   budget_period_id: string;
   start_date: string;
@@ -332,6 +350,7 @@ export interface Database {
         Args: CreateAccountArgs;
         Returns: CreateAccountRow[];
       };
+      create_category: { Args: CreateCategoryArgs; Returns: CreateCategoryRow[] };
       create_income_transaction: {
         Args: CreateIncomeTransactionArgs;
         Returns: CreateIncomeTransactionRow[];
@@ -352,10 +371,12 @@ export interface Database {
         Args: SetAccountActiveArgs;
         Returns: SetAccountActiveRow[];
       };
+      set_category_active: { Args: SetCategoryActiveArgs; Returns: SetCategoryActiveRow[] };
       update_account: {
         Args: UpdateAccountArgs;
         Returns: UpdateAccountRow[];
       };
+      update_category: { Args: UpdateCategoryArgs; Returns: UpdateCategoryRow[] };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

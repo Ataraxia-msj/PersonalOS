@@ -1234,6 +1234,39 @@
   font-weight: 450 !important;
 }
 
+.categorySections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 48px;
+  margin-top: 28px;
+}
+
+.categorySection h3 {
+  margin: 0 0 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 520;
+}
+
+.categoryRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 16px;
+  min-height: 72px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.categoryRow > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.categoryRow strong { color: var(--text-primary); font-size: 13px; font-weight: 540; }
+.categoryRow span { color: var(--text-tertiary); font-size: 11px; }
+.categoryRow > a { color: var(--accent-strong); font-size: 11px; }
+
 .accountFormFieldset {
   min-width: 0;
   margin: 0;
@@ -1655,6 +1688,14 @@
   .accountStatusPanel {
     grid-template-columns: 1fr;
   }
+
+  .categorySections { grid-template-columns: 1fr; gap: 32px; }
+
+  .categoryRow { grid-template-columns: minmax(0, 1fr) auto; }
+
+  .categoryRow > a { grid-column: 2; grid-row: 1; }
+
+  .categoryRow > span { grid-column: 2; }
 
   .accountDangerAction {
     width: 100%;

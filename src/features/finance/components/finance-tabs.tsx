@@ -10,6 +10,7 @@ const tabs = [
   { href: "/finance/transactions", label: "交易" },
   { href: "/finance/budget", label: "预算" },
   { href: "/finance/accounts", label: "账户" },
+  { href: "/finance/categories", label: "分类" },
   { href: "/finance/analysis", label: "分析" },
 ] as const;
 
