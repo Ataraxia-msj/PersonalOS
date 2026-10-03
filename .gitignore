@@ -38,6 +38,7 @@ Thumbs.db
 /.superpowers/
 /.codex/
 /.agents/
+/.affairs-test-runtime/
 
 # Superseded local database review and rehearsal scripts
 /supabase/reviews/
