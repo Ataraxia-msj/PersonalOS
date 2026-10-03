@@ -2,6 +2,7 @@
 
 import {
   IconHome,
+  IconTarget,
   IconSearch,
   IconSettings,
   IconWallet,
@@ -27,6 +28,7 @@ interface Destination {
 const destinations: Destination[] = [
   { href: "/", label: "首页", hint: "Agent 对话", icon: IconHome },
   { href: "/finance", label: "财务", hint: "查看财务数据", icon: IconWallet },
+  { href: "/affairs", label: "事务", hint: "主线推进与金币奖励", icon: IconTarget },
   { href: "/settings", label: "设置", hint: "偏好与账户", icon: IconSettings },
 ];
 

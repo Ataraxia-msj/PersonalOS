@@ -11,6 +11,7 @@ import styles from "./app-header.module.css";
 const primaryLinks = [
   { href: "/", label: "首页" },
   { href: "/finance", label: "财务" },
+  { href: "/affairs", label: "事务" },
 ] as const;
 
 export function AppHeader() {

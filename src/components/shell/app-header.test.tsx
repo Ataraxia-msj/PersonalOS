@@ -20,6 +20,7 @@ describe("AppHeader", () => {
 
     expect(screen.getByRole("link", { name: "首页" })).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: "财务" })).toHaveAttribute("href", "/finance");
+    expect(screen.getByRole("link", { name: "事务" })).toHaveAttribute("href", "/affairs");
     expect(screen.getByRole("link", { name: "设置" })).toHaveAttribute("href", "/settings");
     expect(screen.getByRole("link", { name: "财务" })).toHaveAttribute("aria-current", "page");
   });
