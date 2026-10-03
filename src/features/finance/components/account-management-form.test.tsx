@@ -71,7 +71,7 @@ describe("account management UI", () => {
     gate.resolve({ status: "uncertain", message: "结果未确认", fieldErrors: {} });
     await screen.findByText("结果未确认");
     const first = action.mock.calls[0][1] as FormData;
-    await userEvent.click(screen.getByRole("button", { name: "重试同一次创建" }));
+    await userEvent.click(await screen.findByRole("button", { name: "重试同一次创建" }));
     await screen.findByText("账户和初始余额已保存。");
     const second = action.mock.calls[1][1] as FormData;
     expect(second.get("requestId")).toBe(first.get("requestId"));
