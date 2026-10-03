@@ -116,11 +116,14 @@ export function createAffairsServices(
       id?: string,
     ): Promise<Ui.AffairsFormData | null> {
       const c = await clientFactory();
-      const [ml, pr, ta, rw] = await Promise.all([
+      const [ml, pr, ta, rw, taskHistory] = await Promise.all([
         q.getAffairsMainlines(c),
         q.getAffairsProjects(c),
         q.getAffairsTasks(c),
         resource === "reward" ? q.getAffairsRewards(c) : Promise.resolve([]),
+        resource === "task" && id
+          ? q.getAffairsTaskHistory(c, id)
+          : Promise.resolve([]),
       ]);
       const options = {
         mainlines: ml.map(a.adaptMainline),
@@ -151,7 +154,12 @@ export function createAffairsServices(
             : null;
           return initialValues === undefined
             ? null
-            : { ...options, resource, initialValues };
+            : {
+                ...options,
+                resource,
+                initialValues,
+                taskHistory: taskHistory.map(a.adaptTaskHistory),
+              };
         }
         case "reward": {
           const initialValues = id ? rw.find((r) => r.id === id) : null;

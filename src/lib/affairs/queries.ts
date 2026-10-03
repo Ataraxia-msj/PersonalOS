@@ -12,6 +12,7 @@ import type {
   RedemptionRow,
   PenaltyRow,
   CoinLedgerRow,
+  CommandRow,
 } from "./types";
 import { decimalInteger, validDate } from "./validation";
 export type AffairsQueryClient = SupabaseClient<Database>;
@@ -72,6 +73,32 @@ export async function getAffairsTasks(
     .order("id");
   if (projectId) q = q.eq("project_id", projectId);
   return allRows<TaskRow>("affairs_tasks", q);
+}
+export async function getAffairsTaskHistory(
+  c: AffairsQueryClient,
+  taskId: string,
+): Promise<CommandRow[]> {
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      taskId,
+    )
+  )
+    throw new Error("invalid_task_id");
+  const q = c
+    .from("affairs_commands")
+    .select("*")
+    .eq("result->>object_id", taskId)
+    .in("operation", [
+      "create_affairs_task",
+      "update_affairs_task",
+      "set_affairs_task_status",
+      "complete_affairs_task",
+      "reopen_affairs_task",
+      "undo_affairs_task_completion",
+    ])
+    .order("applied_at", { ascending: false })
+    .order("id");
+  return allRows<CommandRow>("affairs_commands", q);
 }
 export async function getAffairsMilestones(
   c: AffairsQueryClient,

@@ -2,6 +2,14 @@
 import { useState } from "react";
 import { ActionForm, type AffairsBaseFormProps } from "./action-form";
 import styles from "./affairs.module.css";
+import { formatAffairsTime } from "../format";
+const statusLabels = {
+  todo: "待开始",
+  in_progress: "推进中",
+  waiting: "等待",
+  done: "已完成",
+  cancelled: "已取消",
+};
 export function TaskForm({ data, mode, action }: AffairsBaseFormProps<"task">) {
   const v = data.initialValues;
   const [core, setCore] = useState(v?.isCore ?? false);
@@ -84,6 +92,50 @@ export function TaskForm({ data, mode, action }: AffairsBaseFormProps<"task">) {
           <textarea name="description" defaultValue={v?.description ?? ""} />
         </label>
       </ActionForm>
+      {mode === "edit" ? (
+        <section id="task-history" className={styles.section}>
+          <h2>操作历史</h2>
+          <p className={styles.muted}>
+            完成、取消、恢复与编辑均保留原记录，重新开始不抹掉历史。
+          </p>
+          {data.taskHistory.length ? (
+            <ol>
+              {data.taskHistory.map((h) => (
+                <li className={styles.taskRow} key={h.id}>
+                  <div>
+                    <strong>
+                      {h.operation === "undo_affairs_task_completion"
+                        ? "撤销误完成"
+                        : h.operation === "reopen_affairs_task"
+                          ? "重新打开"
+                          : h.operation === "create_affairs_task"
+                            ? "创建行动"
+                            : h.operation === "update_affairs_task"
+                              ? "编辑行动"
+                              : h.status
+                                ? statusLabels[h.status]
+                                : "状态变更"}{" "}
+                      · 版本 {h.revision}
+                    </strong>
+                    <p className={styles.muted}>
+                      {formatAffairsTime(h.appliedAt)}
+                      {h.coinDelta !== 0
+                        ? " · " +
+                          (h.coinDelta > 0 ? "+" : "") +
+                          h.coinDelta +
+                          " 金币"
+                        : ""}
+                    </p>
+                    {h.reason ? <p>{h.reason}</p> : null}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className={styles.muted}>暂无操作历史。</p>
+          )}
+        </section>
+      ) : null}
     </section>
   );
 }

@@ -2,21 +2,19 @@ import { it, expect, vi } from "vitest";
 import { executeRewardCommand } from "./reward-mutations";
 import type { AffairsQueryClient } from "./queries";
 it("preserves original replay receipt, not a guessed live balance", async () => {
-  const rpc = vi
-    .fn()
-    .mockResolvedValue({
-      data: [
-        {
-          object_id: "o",
-          object_revision: "2",
-          command_id: "c",
-          coin_delta: 1,
-          balance_coins: 1,
-          replayed: true,
-        },
-      ],
-      error: null,
-    });
+  const rpc = vi.fn().mockResolvedValue({
+    data: [
+      {
+        object_id: "o",
+        object_revision: "2",
+        command_id: "c",
+        coin_delta: 1,
+        balance_coins: 1,
+        replayed: true,
+      },
+    ],
+    error: null,
+  });
   const command = {
     operation: "complete_affairs_task" as const,
     args: {

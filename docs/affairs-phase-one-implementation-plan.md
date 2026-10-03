@@ -223,9 +223,9 @@ UI types 统一在 features/affairs/types.ts：`AffairsTask`/`AffairsProject` �
 
 **Interfaces:** Consumes全部前述功能；Produces逐项验收证据和用户需要执行的两个 migration 文件，明确已测/未测/阻塞，不把隔离测试当正式库联调成功。
 
-- [ ] **Step 1: 写集成断言与隔离双会话脚本。** 核心完成→余额 +1→用户商品兑换→使用或取消→惩罚/撤销→账本/View 一致；两次完成只能净 +1；余额 4 两次价格3兑换仅一笔；use/cancel 仅一转换；固定锁顺序无反向等待。脚本仅支持独立数据库 fixture，开头校验 `personal_os_affairs_isolated_test` 数据库名，不接受生产连接；不把 PGlite 单会话 Promise.all 当多连接证据。
-- [ ] **Step 2: 执行新旧隔离 SQL runners。** 在已确认本地运行时下运行 foundation/rewards，随后现有 account/category/income/transfer/analysis runners；全部 assertions PASS。系统没有 psql/Docker 时，双会话脚本保留为未执行并报告，不临时连接正式库，也不宣称并发测试通过。
-- [ ] **Step 3: 执行完整静态/单元/构建验收。** `npm run test`、`npm run typecheck`、`npm run lint`、`npm run build` 每条记录 exit code 与完整失败信息；不把首次 Next dev compilation 混入接口耗时；修复必须经过对应 red/green 回归，不能删测试凑通过。
+- [x] **Step 1: 写集成断言与隔离双会话脚本。** 核心完成→余额 +1→用户商品兑换→使用或取消→惩罚/撤销→账本/View 一致；两次完成只能净 +1；余额 4 两次价格3兑换仅一笔；use/cancel 仅一转换；固定锁顺序无反向等待。脚本仅支持独立数据库 fixture，开头校验 `personal_os_affairs_isolated_test` 数据库名，不接受生产连接；不把 PGlite 单会话 Promise.all 当多连接证据。
+- [x] **Step 2: 执行新旧隔离 SQL runners。** 在已确认本地运行时下运行 foundation/rewards，随后现有 account/category/income/transfer/analysis runners；全部 assertions PASS。系统没有 psql/Docker 时，双会话脚本保留为未执行并报告，不临时连接正式库，也不宣称并发测试通过。
+- [x] **Step 3: 执行完整静态/单元/构建验收。** `npm run test`、`npm run typecheck`、`npm run lint`、`npm run build` 每条记录 exit code 与完整失败信息；不把首次 Next dev compilation 混入接口耗时；修复必须经过对应 red/green 回归，不能删测试凑通过。
 - [ ] **Step 4: 浏览器视觉与 Auth 联调。** 390px/768px/1440px 检查工作台、项目详情、商店确认、惩罚确认及登录重定向；比对已确认三张图，清楚区分业务数据与生成图示例。若正式库 migration 尚未由用户执行，记录配置错误/真实空状态的验证，等待部署后再核对真实 View，不用 mock 伪造联调。
 - [ ] **Step 5: 交接，不自动发布。** 本地 commit `test: verify affairs rewards phase one`；报告新表/View/RPC、测试证据、未执行的并发/Auth 检查及 SQL 执行顺序。用户执行 foundation 后 rewards；执行前 migration 自检对象冲突，执行后只读验收。仅用户明确指示后才合并/推送生产。
 
@@ -233,9 +233,9 @@ UI types 统一在 features/affairs/types.ts：`AffairsTask`/`AffairsProject` �
 
 ### 本次执行证据（2026-10-03）
 
-Tasks 1–10 已逐项测试和本地提交。Task 11 的隔离脚本、完整回归、类型检查、lint、生产构建与部署说明已完成；75 文件 / 384 测试通过，所有 11 个隔离 SQL runner exit 0（其中 concurrency_guard 只验证隔离保护，不验证竞态）。生产构建 exit 0。
+Tasks 1–10 已逐项测试和本地提交。Task 11 的隔离脚本、完整回归、类型检查、lint、生产构建与部署说明已完成；审查修复后 75 文件 / 392 测试通过，所有 11 个隔离 SQL runner exit 0（其中 concurrency_guard 验证隔离保护及观察证据拒绝逻辑，不验证实际竞态）。生产构建 exit 0。
 
-Task 11 双会话 **未执行**（无本地 psql/Docker）；真实业务界面及完整 Auth 浏览器验收 **待 SQL 部署**。本地现有有效 session 进入事务页面后，真实查询 PGRST205，被错误边界明确展示，无 mock fallback。390/768/1440 截图仅为导航/未部署状态。详细证据见 `docs/affairs-phase-one-verification.md`；`design-qa.md` final result 为 blocked。没有修改正式库或远程发布。最终全分支审查随后执行，不能将这些待验收项目标作通过。
+Task 11 双会话 **未执行**（无本地 psql/Docker）；真实业务界面及完整 Auth 浏览器验收 **待 SQL 部署**。本地现有有效 session 进入事务页面后，真实查询 PGRST205，被错误边界明确展示，无 mock fallback。390/768/1440 截图仅为导航/未部署状态。详细证据见 `docs/affairs-phase-one-verification.md`；`design-qa.md` final result 为 blocked。没有修改正式库或远程发布。独立全分支审查的 5 项 Important 已在一次 RED→GREEN 修复中处理；无 Critical、无延期 Minor，不能将待验收项目标作通过。
 
 覆盖：spec 1–4 → Tasks 7–10；spec 5–6 → Tasks 1–6；spec 7 → Tasks 4–10；spec 8 → Tasks 5–10；spec 9 → 各任务红绿测试与 Task 11；spec 10 → 本执行顺序与用户 SQL 交接。Review Focus 五项都在对应任务中有具体断言。
 

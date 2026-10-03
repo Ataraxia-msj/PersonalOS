@@ -91,4 +91,20 @@ describe("authenticated affairs action", () => {
       (await submitAffairsAction(initialAffairsActionState, form())).status,
     ).toBe("uncertain");
   });
+  it.each([
+    { status: 0, error: { code: "", message: "TypeError: fetch failed" } },
+    { status: 502, error: { code: "", message: "Bad Gateway" } },
+    {
+      status: 503,
+      error: { code: "PGRST000", message: "connection unavailable" },
+    },
+  ])(
+    "keeps resolved transport/connection errors uncertain: $status",
+    async (response) => {
+      mocks.rpc.mockResolvedValue({ data: null, ...response });
+      expect(
+        (await submitAffairsAction(initialAffairsActionState, form())).status,
+      ).toBe("uncertain");
+    },
+  );
 });

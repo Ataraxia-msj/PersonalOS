@@ -46,7 +46,10 @@ export function ActionForm({
   const router = useRouter();
   const [state, setState] = useState(initialAffairsActionState);
   const [busy, setBusy] = useState(false);
+  const [formEpoch, setFormEpoch] = useState(0);
   const saved = useRef<FormData | null>(null);
+  const identityId = identity?.id;
+  const identityRevision = identity?.revision;
   const locked =
     busy || state.status === "uncertain" || state.status === "success";
   useEffect(() => {
@@ -57,6 +60,20 @@ export function ActionForm({
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [state.status]);
+  useEffect(() => {
+    const submitted = saved.current;
+    // Only confirmed commands may start a new form lifecycle. Refreshing
+    // unrelated props must never discard an unresolved command.
+    if (state.status !== "success" || !submitted || !identityId) return;
+    if (
+      identityId === submitted.get("id") &&
+      identityRevision === submitted.get("revision")
+    )
+      return;
+    saved.current = null;
+    setState(initialAffairsActionState);
+    setFormEpoch((n) => n + 1);
+  }, [identityId, identityRevision, state.status]);
   async function send(data: FormData) {
     if (busy) return;
     setBusy(true);
@@ -71,6 +88,9 @@ export function ActionForm({
         message: "提交结果暂不明确，请保持原内容重试。",
       };
     }
+    // Failure of this retry says nothing about the first unknown attempt.
+    if (state.status === "uncertain" && result.status !== "success")
+      result = { ...result, status: "uncertain", receipt: null };
     setState(result);
     setBusy(false);
     onState?.(result);
@@ -102,7 +122,11 @@ export function ActionForm({
           <input type="hidden" name="revision" value={identity.revision} />
         </>
       ) : null}
-      <fieldset disabled={locked || disabled} className={styles.fieldset}>
+      <fieldset
+        key={formEpoch}
+        disabled={locked || disabled}
+        className={styles.fieldset}
+      >
         {children}
       </fieldset>
       <div

@@ -12,6 +12,7 @@ set local statement_timeout='15s';
 select set_config('request.jwt.claim.sub',user_id::text,true),set_config('affairs.test.scenario',scenario,true)
 from public.affairs_test_scenarios where scenario=:'scenario';
 select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('application_name','affairs_b_'||:'scenario',true);
 set local role authenticated;
 do $$ declare v_scenario text:=current_setting('affairs.test.scenario'); s public.affairs_test_scenarios; result text; bal bigint; begin
  select * into strict s from public.affairs_test_scenarios where scenario=v_scenario;
@@ -24,6 +25,11 @@ do $$ declare v_scenario text:=current_setting('affairs.test.scenario'); s publi
   else raise; end if;
  end;
  if result='success' then raise exception 'B did not wait for A; run A first and B during its sleep'; end if;
+ -- Re-read after waiting so this command sees A's committed observation.
+ select * into strict s from public.affairs_test_scenarios where scenario=v_scenario;
+ if not public.affairs_test_lock_observed(s.observed_b_pid,s.observed_at) then
+  raise exception 'concurrency_not_observed: sequential or stale result is not a PASS';
+ end if;
  select balance_coins into bal from public.vw_affairs_coin_balance where user_id=auth.uid();
  if v_scenario='complete' then
   if bal<>1 or (select count(*) from public.affairs_coin_events where task_id=s.task_id and kind='task_reward')<>1

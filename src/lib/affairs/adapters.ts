@@ -94,3 +94,39 @@ export function adaptCoinEntry(r: Row.CoinLedgerRow): Ui.AffairsCoinEntry {
     balanceAfter: safeInteger(r.balance_after),
   };
 }
+export function adaptTaskHistory(r: Row.CommandRow): Ui.AffairsTaskHistory {
+  const statuses = [
+    "todo",
+    "in_progress",
+    "waiting",
+    "done",
+    "cancelled",
+  ] as const;
+  let status: Row.TaskStatus | null = null;
+  if (
+    r.operation === "create_affairs_task" ||
+    r.operation === "reopen_affairs_task" ||
+    r.operation === "undo_affairs_task_completion"
+  )
+    status = "todo";
+  else if (r.operation === "complete_affairs_task") status = "done";
+  else if (r.operation === "set_affairs_task_status") {
+    const raw = r.payload.status;
+    if (typeof raw !== "string" || !statuses.includes(raw as Row.TaskStatus))
+      throw new Error("invalid_task_history_status");
+    status = raw as Row.TaskStatus;
+  }
+  if (r.result.object_revision === null)
+    throw new Error("invalid_task_history_revision");
+  const reason = r.payload.reason ?? r.payload.waiting_reason;
+  return {
+    id: r.id,
+    taskId: r.result.object_id,
+    operation: r.operation,
+    appliedAt: r.applied_at,
+    revision: decimalInteger(r.result.object_revision),
+    status,
+    reason: typeof reason === "string" ? reason : null,
+    coinDelta: safeInteger(r.result.coin_delta),
+  };
+}

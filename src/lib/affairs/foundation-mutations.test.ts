@@ -2,21 +2,19 @@ import { it, expect, vi } from "vitest";
 import { executeFoundationCommand } from "./foundation-mutations";
 import type { AffairsQueryClient } from "./queries";
 it("sends typed foundation args to one RPC, without client-created coin fields", async () => {
-  const rpc = vi
-    .fn()
-    .mockResolvedValue({
-      data: [
-        {
-          object_id: "o",
-          object_revision: 1,
-          command_id: "c",
-          coin_delta: 0,
-          balance_coins: 0,
-          replayed: false,
-        },
-      ],
-      error: null,
-    });
+  const rpc = vi.fn().mockResolvedValue({
+    data: [
+      {
+        object_id: "o",
+        object_revision: 1,
+        command_id: "c",
+        coin_delta: 0,
+        balance_coins: 0,
+        replayed: false,
+      },
+    ],
+    error: null,
+  });
   const command = {
     operation: "create_affairs_task" as const,
     args: {

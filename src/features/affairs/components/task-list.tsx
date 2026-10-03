@@ -86,6 +86,12 @@ export function TaskList({
                   >
                     编辑
                   </Link>
+                  <Link
+                    className={styles.textButton}
+                    href={"/affairs/tasks/" + task.id + "/edit#task-history"}
+                  >
+                    查看历史
+                  </Link>
                   {!blocked ? (
                     <>
                       <TaskCompletionPanel

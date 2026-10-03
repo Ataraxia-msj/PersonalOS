@@ -3,6 +3,7 @@ import {
   getAffairsCoinLedger,
   getAffairsCoinBalance,
   getAffairsTasks,
+  getAffairsTaskHistory,
   type AffairsQueryClient,
 } from "./queries";
 function query(data: unknown = [], error: unknown = null) {
@@ -22,6 +23,10 @@ function query(data: unknown = [], error: unknown = null) {
     },
     eq: (...v: unknown[]) => {
       calls.push(["eq", ...v]);
+      return chain;
+    },
+    in: (...v: unknown[]) => {
+      calls.push(["in", ...v]);
       return chain;
     },
     limit: (...v: unknown[]) => {
@@ -72,5 +77,33 @@ describe("real affairs queries", () => {
   it("allows legitimate missing wallet", async () => {
     const q = query(null);
     expect(await getAffairsCoinBalance(q.client)).toBeNull();
+  });
+  it("reads persisted owner command history for one task, not just its current state", async () => {
+    const q = query();
+    await getAffairsTaskHistory(
+      q.client,
+      "a0000000-0000-0000-0000-000000000001",
+    );
+    expect(q.from).toHaveBeenCalledWith("affairs_commands");
+    expect(q.calls).toContainEqual([
+      "eq",
+      "result->>object_id",
+      "a0000000-0000-0000-0000-000000000001",
+    ]);
+    expect(q.calls).toContainEqual([
+      "order",
+      "applied_at",
+      { ascending: false },
+    ]);
+    expect(q.calls.find((c) => c[0] === "in")).toEqual([
+      "in",
+      "operation",
+      expect.arrayContaining([
+        "set_affairs_task_status",
+        "complete_affairs_task",
+        "reopen_affairs_task",
+        "undo_affairs_task_completion",
+      ]),
+    ]);
   });
 });

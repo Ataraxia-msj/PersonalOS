@@ -15,7 +15,8 @@ end $$;
 insert into auth.users values ('c0000000-0000-0000-0000-000000000003');
 create table public.affairs_test_scenarios (
  scenario text primary key, user_id uuid not null,
- task_id uuid, reward_id uuid, redemption_id uuid
+ task_id uuid, reward_id uuid, redemption_id uuid,
+ observed_b_pid integer, observed_at timestamptz
 );
 revoke all on public.affairs_test_scenarios from public,anon,authenticated;
 grant select on public.affairs_test_scenarios to authenticated;
@@ -25,7 +26,7 @@ do $$ declare r record; t uuid; rw uuid; i integer; begin
  perform set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000001',false);
  select * into r from public.create_affairs_task(gen_random_uuid(),
   '{"title":"Race core","is_core":true,"core_reason":"Test","completion_criteria":"Done"}');
- insert into public.affairs_test_scenarios values ('complete',auth.uid(),r.object_id,null,null);
+ insert into public.affairs_test_scenarios(scenario,user_id,task_id) values ('complete',auth.uid(),r.object_id);
 
  perform set_config('request.jwt.claim.sub','b0000000-0000-0000-0000-000000000002',false);
  for i in 1..4 loop
@@ -34,7 +35,7 @@ do $$ declare r record; t uuid; rw uuid; i integer; begin
   perform public.complete_affairs_task(gen_random_uuid(),r.object_id,1,true);
  end loop;
  select * into r from public.create_affairs_reward(gen_random_uuid(),'{"name":"Race reward","price_coins":3}');
- insert into public.affairs_test_scenarios values ('redeem',auth.uid(),null,r.object_id,null);
+ insert into public.affairs_test_scenarios(scenario,user_id,reward_id) values ('redeem',auth.uid(),r.object_id);
 
  perform set_config('request.jwt.claim.sub','c0000000-0000-0000-0000-000000000003',false);
  select * into r from public.create_affairs_task(gen_random_uuid(),
@@ -43,7 +44,7 @@ do $$ declare r record; t uuid; rw uuid; i integer; begin
  select * into r from public.create_affairs_reward(gen_random_uuid(),'{"name":"Settle race","price_coins":1}');
  rw:=r.object_id;
  select * into r from public.redeem_affairs_reward(gen_random_uuid(),rw,1,1);
- insert into public.affairs_test_scenarios values ('settle',auth.uid(),t,rw,r.object_id);
+ insert into public.affairs_test_scenarios(scenario,user_id,task_id,reward_id,redemption_id) values ('settle',auth.uid(),t,rw,r.object_id);
 end $$;
 
 -- Test-only helper: executes the real authenticated public RPCs, never writes app tables.
@@ -67,4 +68,10 @@ declare s public.affairs_test_scenarios; r record; begin
 end $$;
 revoke all on function public.affairs_test_race(text,text) from public,anon;
 grant execute on function public.affairs_test_race(text,text) to authenticated;
+create function public.affairs_test_lock_observed(p_observed_pid integer,p_observed_at timestamptz)
+returns boolean language sql stable security invoker set search_path='' as $$
+ select coalesce(p_observed_pid=pg_backend_pid() and p_observed_at>=transaction_timestamp(),false);
+$$;
+revoke all on function public.affairs_test_lock_observed(integer,timestamptz) from public,anon;
+grant execute on function public.affairs_test_lock_observed(integer,timestamptz) to authenticated;
 select 'Ready: run sessions A and B concurrently, once per scenario complete / redeem / settle' as instructions;

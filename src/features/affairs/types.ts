@@ -9,7 +9,18 @@ import type {
   PenaltyRow,
   CoinLedgerRow,
   DailyContributionRow,
+  CommandRow,
 } from "@/lib/affairs/types";
+export interface AffairsTaskHistory {
+  id: string;
+  taskId: string;
+  operation: CommandRow["operation"];
+  appliedAt: string;
+  revision: string;
+  status: TaskRow["status"] | null;
+  reason: string | null;
+  coinDelta: number;
+}
 type CamelKey<S extends string> = S extends `${infer A}_${infer B}`
   ? `${A}${Capitalize<CamelKey<B>>}`
   : S;
@@ -78,6 +89,10 @@ export type AffairsFormData = FormOptions &
   (
     | { resource: "mainline"; initialValues: AffairsMainline | null }
     | { resource: "project"; initialValues: AffairsProject | null }
-    | { resource: "task"; initialValues: AffairsTask | null }
+    | {
+        resource: "task";
+        initialValues: AffairsTask | null;
+        taskHistory: AffairsTaskHistory[];
+      }
     | { resource: "reward"; initialValues: AffairsReward | null }
   );
