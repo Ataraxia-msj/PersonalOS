@@ -107,7 +107,10 @@ const base: TransactionDetailView = {
   budget_bucket_id: ids[3], budget_bucket_name: "真实储蓄分类", saved_budget_bucket_id: ids[3], saved_budget_bucket_name: "真实储蓄分类",
 };
 function pair(purpose: "general" | "saving" | "investment" | "debt" = "saving"): TransactionDetailView[] {
-  return [{ ...base, transfer_purpose: purpose }, { ...base, transfer_purpose: purpose, line_id: "line-in", line_sort_order: 1,
+  return [{ ...base, transfer_purpose: purpose, exclude_from_budget: purpose === "general",
+    saved_budget_bucket_id: purpose === "general" ? null : base.saved_budget_bucket_id,
+    saved_budget_bucket_name: purpose === "general" ? null : base.saved_budget_bucket_name },
+  { ...base, transfer_purpose: purpose, exclude_from_budget: purpose === "general", line_id: "line-in", line_sort_order: 1,
     account_id: ids[2], account_name: "目标账户", account_class: purpose === "debt" ? "liability" : "asset",
     amount: purpose === "debt" ? -123.45 : 123.45, saved_budget_bucket_id: null, saved_budget_bucket_name: null,
     budget_period_id: null, budget_period_start_date: null, budget_period_end_date: null, budget_bucket_id: null, budget_bucket_name: null,
@@ -131,7 +134,7 @@ describe("transfer grouping", () => {
   });
   it.each(["general", "saving", "investment", "debt"] as const)("shows %s once with neutral positive magnitude and both accounts", (purpose) => {
     const [row] = adaptTransactions(pair(purpose).reverse());
-    expect(row).toMatchObject({ accountName: "银行 → 目标账户", amount: 123.45, editable: false,
+    expect(row).toMatchObject({ accountName: "银行 → 目标账户", amount: 123.45, editable: true, entryType: "transfer",
       date: "2026-09-08", transfer: { purpose, legacy: false }, accounts: [{ id: ids[1], name: "银行" }, { id: ids[2], name: "目标账户" }],
     });
     expect(adaptTransactions(pair(purpose))).toHaveLength(1);

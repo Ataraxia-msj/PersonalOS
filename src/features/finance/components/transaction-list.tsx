@@ -118,7 +118,7 @@ export function TransactionList({ transactions }: TransactionListProps) {
                     <Link
                       aria-label={`修改${transaction.merchant}`}
                       className={styles.transactionEditLink}
-                      href={`/finance/transactions/${transaction.id}/edit`}
+                      href={`/finance/transactions/${transaction.id}/edit${transaction.entryType && transaction.entryType !== "expense" ? `?type=${transaction.entryType}` : ""}`}
                     >
                       <IconEdit aria-hidden="true" size={16} stroke={1.7} />
                     </Link>

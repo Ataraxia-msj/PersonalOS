@@ -255,6 +255,7 @@ describe("Finance View adapters", () => {
         id: "entry-lunch",
         merchant: "午餐",
         editable: false,
+        entryType: "expense",
         excludedFromBudget: false,
         budgetLabel: "预算归属待补充",
       },
@@ -270,6 +271,7 @@ describe("Finance View adapters", () => {
         id: "entry-transfer",
         merchant: "转入储蓄",
         editable: false,
+        entryType: "transfer",
         excludedFromBudget: false,
         budgetLabel: "—",
       },
@@ -308,6 +310,29 @@ describe("Finance View adapters", () => {
     expect(editable).toMatchObject({ editable: true, excludedFromBudget: true });
     expect(imported.editable).toBe(false);
     expect(multiLine.editable).toBe(false);
+  });
+
+  it("marks only exact manual income and current transfer structures editable", () => {
+    const income = transactionLine({
+      entry_id: "entry-income", entry_type: "income", line_sort_order: 0, amount: 8500,
+      account_class: "asset", category_id: "salary", category_name: "工资", category_type: "income",
+      description: "工资",
+    });
+    const transferFrom = transactionLine({
+      entry_id: "entry-transfer-edit", entry_type: "transfer", transfer_purpose: "saving",
+      line_sort_order: 0, line_id: "from", amount: -500, category_id: null,
+      category_name: null, category_type: null, description: "转入储蓄", saved_budget_bucket_id: "saving",
+    });
+    const transferTo = transactionLine({
+      ...transferFrom, line_sort_order: 1, line_id: "to", amount: 500,
+      account_id: "account-savings", account_name: "储蓄账户", saved_budget_bucket_id: null,
+    });
+    const [editableIncome] = adaptTransactions([income]);
+    const [editableTransfer] = adaptTransactions([transferFrom, transferTo]);
+    const [malformedTransfer] = adaptTransactions([transferFrom, { ...transferTo, amount: 499 }]);
+    expect(editableIncome).toMatchObject({ editable: true, entryType: "income" });
+    expect(editableTransfer).toMatchObject({ editable: true, entryType: "transfer" });
+    expect(malformedTransfer.editable).toBe(false);
   });
 
   it("maps the View budget period and bucket into a transaction label", () => {

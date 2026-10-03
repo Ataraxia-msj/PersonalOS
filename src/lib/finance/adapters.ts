@@ -103,7 +103,18 @@ export function adaptTransactions(rows: TransactionDetailView[], currencies: Arr
       && destination.amount === (purpose === "debt" ? primaryLine.amount : -primaryLine.amount)
       && destination.saved_budget_bucket_id === null
       && orderedLines.every((line) => line.entry_type === "transfer" && line.transfer_purpose === purpose
-        && line.category_id === null && line.source === "manual" && line.status === "confirmed");
+        && line.category_id === null && line.source === "manual" && line.status === "confirmed"
+        && line.related_entry_id === null && line.description === primaryLine.description
+        && line.memo === primaryLine.memo && line.exclude_from_budget === (purpose === "general"))
+      && (purpose === "general" ? primaryLine.saved_budget_bucket_id === null : true);
+    const supportedIncome = primaryLine.entry_type === "income"
+      && orderedLines.length === 1 && primaryLine.line_sort_order === 0
+      && primaryLine.source === "manual" && primaryLine.status === "confirmed"
+      && primaryLine.related_entry_id === null && !primaryLine.exclude_from_budget
+      && primaryLine.transfer_purpose == null && primaryLine.amount > 0
+      && primaryLine.account_class === "asset" && primaryLine.category_type === "income"
+      && primaryLine.category_id !== null && primaryLine.saved_budget_bucket_id === null
+      && primaryLine.budget_period_id === null && primaryLine.budget_bucket_id === null;
     const accountName = Array.from(new Set(orderedLines.map((line) => line.account_name))).join(" / ");
     const categoryNames = Array.from(
       new Set(orderedLines.flatMap((line) => line.category_name ? [line.category_name] : [])),
@@ -128,11 +139,14 @@ export function adaptTransactions(rows: TransactionDetailView[], currencies: Arr
         : primaryLine.amount,
       category: isTransfer ? supportedTransfer ? transferLabels[purpose!] : "转账 · 历史格式" : categoryNames.join(" / ") || transactionTypeLabels[primaryLine.entry_type],
       date: shanghaiDate(new Date(primaryLine.occurred_at)),
+      entryType: primaryLine.entry_type,
       editable:
-        primaryLine.entry_type === "expense"
-        && primaryLine.source === "manual"
-        && primaryLine.status === "confirmed"
-        && orderedLines.length === 1,
+        (primaryLine.entry_type === "expense"
+          && primaryLine.source === "manual"
+          && primaryLine.status === "confirmed"
+          && orderedLines.length === 1)
+        || supportedIncome
+        || supportedTransfer,
       excludedFromBudget: primaryLine.exclude_from_budget,
       budgetLabel: primaryLine.exclude_from_budget
         ? "不计入预算"

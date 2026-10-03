@@ -47,6 +47,19 @@ describe("Finance supporting sections", () => {
     expect(screen.queryByRole("link", { name: "修改工资" })).not.toBeInTheDocument();
   });
 
+  it("routes editable income and transfer rows to their validated edit modes", () => {
+    render(<TransactionList transactions={[
+      { ...transactions[1], entryType: "income", editable: true },
+      { ...transactions[0], id: "move", merchant: "转入储蓄", entryType: "transfer", editable: true },
+    ]} />);
+    expect(screen.getByRole("link", { name: "修改工资" })).toHaveAttribute(
+      "href", "/finance/transactions/salary/edit?type=income",
+    );
+    expect(screen.getByRole("link", { name: "修改转入储蓄" })).toHaveAttribute(
+      "href", "/finance/transactions/move/edit?type=transfer",
+    );
+  });
+
   it("renders the View-backed budget attribution in its own column", () => {
     render(<TransactionList transactions={[
       { ...transactions[0], budgetLabel: "2026年9月 · 自由消费", excludedFromBudget: false },

@@ -20,6 +20,7 @@ export interface Account {
 }
 
 export interface Transaction {
+  entryType?: "expense" | "income" | "transfer" | "refund" | "adjustment";
   id: string;
   date: string;
   merchant: string;

@@ -80,6 +80,14 @@ export function validateIncomeUpdateInput(
   // Update identity is immutable and never sourced from a create request id.
   if (!reconciliationUuid.test(entryId)) errors.entryId = "交易标识无效。";
   if (!base.input || Object.keys(errors).length > 0) return { errors, input: null };
-  const { requestId: _requestId, ...editable } = base.input;
-  return { errors, input: { ...editable, entryId } };
+  return { errors, input: {
+    accountId: base.input.accountId,
+    amount: base.input.amount,
+    categoryId: base.input.categoryId,
+    description: base.input.description,
+    entryId,
+    memo: base.input.memo,
+    occurredAt: base.input.occurredAt,
+    rawText: base.input.rawText,
+  } };
 }

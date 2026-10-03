@@ -71,6 +71,15 @@ export function validateTransferUpdateInput(
   }
 
   if (!base.args || Object.keys(errors).length > 0) return { args: null, errors };
-  const { p_request_id: _requestId, ...editable } = base.args;
-  return { args: { ...editable, p_entry_id: entryId }, errors };
+  return { args: {
+    p_amount: base.args.p_amount,
+    p_budget_bucket_id: base.args.p_budget_bucket_id,
+    p_description: base.args.p_description,
+    p_entry_id: entryId,
+    p_from_account_id: base.args.p_from_account_id,
+    p_memo: base.args.p_memo,
+    p_occurred_at: base.args.p_occurred_at,
+    p_purpose: base.args.p_purpose,
+    p_to_account_id: base.args.p_to_account_id,
+  }, errors };
 }
