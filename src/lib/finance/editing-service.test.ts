@@ -96,5 +96,16 @@ describe("transaction editing services", () => {
       amount: 500, source: "manual", note: null, created_at: "", updated_at: "",
     }] });
     await expect(getTransferTransactionEditData(ids[0])).resolves.toMatchObject({ initialValues: { budgetLocked: true } });
+
+    d.periods.mockResolvedValueOnce([{ id: "period", status: "closed" }]);
+    d.transfer.mockResolvedValueOnce({ transactionLines: [
+      { ...valid.transactionLines[0], transfer_purpose: "general", exclude_from_budget: true,
+        saved_budget_bucket_id: null, amount: -99 },
+      { ...valid.transactionLines[1], transfer_purpose: "general", exclude_from_budget: true, amount: 99 },
+    ], budgetImpacts: [{ id: "impact", entry_id: ids[0], line_id: "line-one", budget_period_id: "period",
+      budget_bucket_id: ids[3], amount: 500, source: "manual", note: null, created_at: "", updated_at: "" }] });
+    await expect(getTransferTransactionEditData(ids[0])).resolves.toMatchObject({
+      initialValues: { purpose: "general", amount: 99, budgetLocked: true },
+    });
   });
 });

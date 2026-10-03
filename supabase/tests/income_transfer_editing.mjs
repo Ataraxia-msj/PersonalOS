@@ -160,6 +160,10 @@ await test('open impact is moved once while a closed impact is preserved exactly
   assert.equal(preserved.id, original.id); assert.equal(preserved.budget_period_id, original.budget_period_id);
   assert.equal(Number(preserved.amount), Number(original.amount));
   assert.equal((await sql('select 1 from budget_impacts where entry_id=$1', [closed.entry_id])).length, 1);
+  const repeated = await updateTransfer(closed.entry_id, { time: '2025-03-04T10:00:00+08', purpose: 'general', bucket: null, amount: 99 });
+  assert.equal(repeated.warning_code, 'budget_period_closed_preserved');
+  const stillPreserved = await one('select * from budget_impacts where entry_id=$1', [closed.entry_id]);
+  assert.equal(stillPreserved.id, original.id); assert.equal(Number(stillPreserved.amount), Number(original.amount));
 });
 
 await test('missing budget inputs are nonfatal warnings without stale impacts', async () => {

@@ -3,28 +3,32 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
-import { transferLabels, type TransferActionState, type TransferFormData, type TransferPurpose } from "@/lib/finance/transfer-types";
+import { transferLabels, type TransferActionState, type TransferFormData, type TransferPurpose, type TransferTransactionInitialValues } from "@/lib/finance/transfer-types";
 import { validateTransferInput } from "@/lib/finance/transfer-validation";
 import styles from "./finance.module.css";
 import transferStyles from "./transfer.module.css";
 
 const pendingKey = "personal-os:pending-transfer:v1";
 
-export function TransferTransactionForm({ action, data, defaultOccurredAt }: {
+export function TransferTransactionForm({ action, data, defaultOccurredAt, initialValues, mode = "create" }: {
   action: (data: FormData) => Promise<TransferActionState>;
   data: TransferFormData;
-  defaultOccurredAt: string;
+  defaultOccurredAt?: string;
+  initialValues?: TransferTransactionInitialValues;
+  mode?: "create" | "edit";
 }) {
   const router = useRouter();
-  const [purpose, setPurpose] = useState<TransferPurpose>("general");
-  const [fromId, setFromId] = useState("");
-  const [toId, setToId] = useState("");
-  const [bucketId, setBucketId] = useState("");
+  const editing = mode === "edit";
+  const [purpose, setPurpose] = useState<TransferPurpose>(initialValues?.purpose ?? "general");
+  const [fromId, setFromId] = useState(initialValues?.fromAccountId ?? "");
+  const [toId, setToId] = useState(initialValues?.toAccountId ?? "");
+  const [bucketId, setBucketId] = useState(initialValues?.budgetBucketId ?? "");
   const [state, setState] = useState<TransferActionState | null>(null);
   const [ready, setReady] = useState(false);
-  const [occurredAt, setOccurredAt] = useState(defaultOccurredAt);
-  const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("");
+  const [occurredAt, setOccurredAt] = useState(initialValues?.occurredAt ?? defaultOccurredAt ?? "");
+  const [amount, setAmount] = useState(initialValues ? String(initialValues.amount) : "");
+  const [description, setDescription] = useState(initialValues?.description ?? "");
+  const [memo, setMemo] = useState(initialValues?.memo ?? "");
   const [pending, startTransition] = useTransition();
   const inFlight = useRef(false);
   const submitted = useRef<FormData | null>(null);
@@ -39,6 +43,10 @@ export function TransferTransactionForm({ action, data, defaultOccurredAt }: {
   const accountLabel = (account: TransferFormData["accounts"][number]) => `${account.name} · 估算 ${account.currency} ${new Intl.NumberFormat("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(account.balance)}`;
 
   useEffect(() => {
+    if (editing) {
+      setReady(true);
+      return;
+    }
     try {
       const stored = sessionStorage.getItem(pendingKey);
       if (stored) {
@@ -58,13 +66,14 @@ export function TransferTransactionForm({ action, data, defaultOccurredAt }: {
         setOccurredAt(String(payload.get("occurredAt")));
         setAmount(String(payload.get("amount")));
         setDescription(String(payload.get("description")));
+        setMemo(String(payload.get("memo") ?? ""));
         setState({ status: "uncertain", errors: {}, result: null, message: "已恢复上一次未确认的转账。请核对原内容，再重试同一次转账。" });
       }
       setReady(true);
     } catch {
       setState({ status: "error", errors: {}, result: null, message: "无法读取浏览器中的转账重试信息，请先核对交易记录并检查浏览器存储设置，暂不允许新建转账。" });
     }
-  }, []);
+  }, [editing]);
 
   useEffect(() => {
     if (!uncertain && !pending) return;
@@ -84,13 +93,17 @@ export function TransferTransactionForm({ action, data, defaultOccurredAt }: {
     if (!ready || inFlight.current || saved || (!uncertain && !canSubmit)) return;
     if (!uncertain) {
       const payload = new FormData(event.currentTarget);
-      try {
-        payload.set("requestId", crypto.randomUUID());
-        // Preserve identity before any possible server write; never automatically replay it.
-        sessionStorage.setItem(pendingKey, JSON.stringify(Array.from(payload.entries())));
-      } catch {
-        setState({ status: "error", errors: {}, result: null, message: "浏览器无法保留重试信息，本次未提交。请检查浏览器存储设置。" });
-        return;
+      if (editing) {
+        payload.set("entryId", initialValues?.entryId ?? "");
+      } else {
+        try {
+          payload.set("requestId", crypto.randomUUID());
+          // Preserve identity before any possible server write; never automatically replay it.
+          sessionStorage.setItem(pendingKey, JSON.stringify(Array.from(payload.entries())));
+        } catch {
+          setState({ status: "error", errors: {}, result: null, message: "浏览器无法保留重试信息，本次未提交。请检查浏览器存储设置。" });
+          return;
+        }
       }
       submitted.current = payload;
     }
@@ -104,8 +117,8 @@ export function TransferTransactionForm({ action, data, defaultOccurredAt }: {
         message: "尚未确认保存结果。请保留本页面，重试同一次转账，不要新建另一笔。" }; }
       // A later failure says nothing about an earlier request's commit outcome.
       if (uncertain && next.status !== "success") next = { ...next, status: "uncertain",
-        message: `${next.message} 首次提交结果仍未确认，请保留原请求重试。` };
-      if (next.status !== "uncertain") {
+        message: `${next.message} 首次提交结果仍未确认，请保留原内容重试。` };
+      if (!editing && next.status !== "uncertain") {
         try {
           // A detached old request can finish after a newer transfer has begun.
           // It must never delete that newer transfer's recovery identity.
@@ -125,13 +138,14 @@ export function TransferTransactionForm({ action, data, defaultOccurredAt }: {
     });
   }
 
-  return <section className={styles.expenseWorkspace} aria-label="新增转账">
+  return <section className={styles.expenseWorkspace} aria-label={editing ? "修改转账" : "新增转账"}>
     <Link className={styles.expenseBackLink} href="/finance/transactions">← 返回交易</Link>
     <header className={styles.expenseHeading}>
-      <p className={styles.eyebrow}>TRANSFER</p><h2>记录转账</h2>
-      <p>本人同币种账户之间的资金移动，不计入收入或支出。</p>
+      <p className={styles.eyebrow}>{editing ? "EDIT TRANSFER" : "TRANSFER"}</p><h2>{editing ? "修改转账" : "记录转账"}</h2>
+      <p>{editing ? "修改本人账户之间的资金移动；保存后以真实账本结果刷新。" : "本人同币种账户之间的资金移动，不计入收入或支出。"}</p>
     </header>
     {!saved ? <form aria-label="转账表单" onSubmit={submit} className={styles.expenseForm}>
+      {editing ? <input name="entryId" type="hidden" value={initialValues?.entryId ?? ""} /> : null}
       <fieldset disabled={!ready || pending || uncertain} className={transferStyles.fields}>
         <div className={styles.expenseFormGrid}>
           <label className={styles.expenseField}><span>用途</span>
@@ -170,6 +184,9 @@ export function TransferTransactionForm({ action, data, defaultOccurredAt }: {
           <label className={`${styles.expenseField} ${styles.expenseDescription}`}><span>描述</span>
             <input name="description" required maxLength={1000} placeholder="例如：转入本月储蓄" value={description} onChange={(e) => setDescription(e.target.value)} />
           </label>
+          <label className={`${styles.expenseField} ${styles.expenseDescription}`}><span>备注</span>
+            <input aria-label="备注" name="memo" maxLength={1000} placeholder="可选" value={memo} onChange={(e) => setMemo(e.target.value)} />
+          </label>
         </div>
         <p className={styles.expenseNotice}>{purpose === "general" ? "普通转账不占用预算。储蓄或投资资金转回时也选择普通转账，不算收入。"
           : purpose === "debt" ? "仅记录还款本金，负债余额随之减少；利息、手续费请另记一笔支出。"
@@ -188,7 +205,7 @@ export function TransferTransactionForm({ action, data, defaultOccurredAt }: {
       </div> : null}
       <div className={styles.expenseActions}><p>确认成功后读取真实财务数据，不预先修改余额。</p>
         <button className={styles.expenseSubmit} type="submit" disabled={!ready || pending || (!uncertain && !canSubmit)}>
-          {pending ? "正在记录…" : uncertain ? "重试同一次转账" : "记录转账"}
+          {pending ? "正在保存…" : uncertain ? editing ? "重试同一次修改" : "重试同一次转账" : editing ? "保存修改" : "记录转账"}
         </button>
       </div>
     </form> : <div role="status" className={styles.expenseNotice}>

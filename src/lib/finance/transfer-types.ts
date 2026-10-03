@@ -31,7 +31,7 @@ export interface TransferActionState {
   status: "error" | "uncertain" | "success";
   message: string;
   errors: Record<string, string>;
-  result: TransferResult | null;
+  result: TransferResult | UpdateTransferResult | null;
 }
 export interface TransferFormData {
   accounts: ExpenseAccountOption[];

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TransferTransactionForm } from "./transfer-transaction-form";
 import { TransactionList } from "./transaction-list";
-import type { TransferActionState, TransferFormData } from "@/lib/finance/transfer-types";
+import type { TransferActionState, TransferFormData, TransferTransactionInitialValues } from "@/lib/finance/transfer-types";
 const refresh = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 const ids = [1, 2, 3, 4].map((n) => `00000000-0000-0000-0000-${String(n).padStart(12, "0")}`);
@@ -143,6 +143,40 @@ describe("transfer form", () => {
     setup(undefined, { accounts: [], budgetBuckets: [] });
     expect(screen.getByText(/没有可用的转出资产账户/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "记录转账" })).toBeDisabled();
+  });
+  it("populates and submits a stable transfer edit without creating a request id", async () => {
+    const initialValues: TransferTransactionInitialValues = {
+      entryId: ids[3], occurredAt: "2026-09-07T08:00:00", amount: 500,
+      fromAccountId: ids[0], toAccountId: ids[1], purpose: "saving", budgetBucketId: "saving-real",
+      description: "转入储蓄", memo: "备用金", budgetLocked: false,
+    };
+    const action = vi.fn().mockResolvedValue({ ...success, result: success.result && { ...success.result, replayed: undefined }, message: "转账已修改" });
+    render(<TransferTransactionForm action={action} data={data} mode="edit" initialValues={initialValues} />);
+    expect(screen.getByRole("heading", { name: "修改转账" })).toBeVisible();
+    expect(screen.getByLabelText("用途")).toHaveValue("saving");
+    expect(screen.getByLabelText("金额")).toHaveValue(500);
+    expect(screen.getByLabelText("预算分类")).toHaveValue("saving-real");
+    expect(screen.getByLabelText("备注")).toHaveValue("备用金");
+    await userEvent.click(screen.getByRole("button", { name: "保存修改" }));
+    const submitted = action.mock.calls[0][0] as FormData;
+    expect(submitted.get("entryId")).toBe(ids[3]);
+    expect(submitted.get("requestId")).toBeNull();
+    expect(submitted.get("memo")).toBe("备用金");
+    expect(await screen.findByText("转账已修改")).toBeVisible();
+  });
+
+  it("keeps the same edit payload for an uncertain retry", async () => {
+    const initialValues: TransferTransactionInitialValues = { entryId: ids[3], occurredAt: "2026-09-07T08:00:00",
+      amount: 500, fromAccountId: ids[0], toAccountId: ids[1], purpose: "general", budgetBucketId: "",
+      description: "调拨", memo: "", budgetLocked: false };
+    const action = vi.fn().mockRejectedValueOnce(new Error("network")).mockResolvedValueOnce({ ...success, message: "转账已修改" });
+    render(<TransferTransactionForm action={action} data={data} mode="edit" initialValues={initialValues} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "保存修改" }));
+    await user.click(await screen.findByRole("button", { name: "重试同一次修改" }));
+    await screen.findByText("转账已修改");
+    expect(Array.from((action.mock.calls[1][0] as FormData).entries()))
+      .toEqual(Array.from((action.mock.calls[0][0] as FormData).entries()));
   });
 });
 it("finds one complete transfer under either account and renders a neutral amount", async () => {

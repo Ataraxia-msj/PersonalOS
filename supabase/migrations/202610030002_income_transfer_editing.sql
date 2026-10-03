@@ -244,15 +244,21 @@ begin
   end if;
   if cardinality(v_impact_ids) = 1 then
     select bi.* into v_impact from public.budget_impacts bi where bi.id = v_impact_ids[1];
-    if v_impact.line_id is distinct from v_from_line.id
-      or v_impact.budget_bucket_id is distinct from v_from_line.budget_bucket_id
-      or v_impact.amount is distinct from -v_from_line.amount then
+    if v_impact.line_id is distinct from v_from_line.id then
       raise exception 'transfer_budget_integrity_error' using errcode = '23514';
     end if;
     select bp.status into v_old_period_status
     from public.budget_periods bp where bp.id = v_impact.budget_period_id for share;
     if not found then raise exception 'transfer_budget_integrity_error' using errcode = '23514'; end if;
     v_closed_impact := v_old_period_status = 'closed';
+    -- A closed impact is immutable historical budget truth. Later transaction edits
+    -- may intentionally diverge in amount or classification without rewriting it.
+    if not v_closed_impact and (
+      v_impact.budget_bucket_id is distinct from v_from_line.budget_bucket_id
+      or v_impact.amount is distinct from -v_from_line.amount
+    ) then
+      raise exception 'transfer_budget_integrity_error' using errcode = '23514';
+    end if;
   end if;
 
   perform 1 from public.accounts a

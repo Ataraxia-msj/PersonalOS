@@ -227,6 +227,8 @@ export async function getTransferTransactionEditData(
   const [from, to] = ordered;
   const purpose = from?.transfer_purpose ?? null;
   const impact = editRows.budgetImpacts[0] ?? null;
+  const impactPeriod = impact ? periods.find((period) => period.id === impact.budget_period_id) : null;
+  const closedImpact = impactPeriod?.status === "closed";
   if (ordered.length !== 2 || editRows.budgetImpacts.length > 1 || !from || !to
     || from.entry_id !== entryId || to.entry_id !== entryId || from.entry_type !== "transfer"
     || to.entry_type !== "transfer" || from.source !== "manual" || to.source !== "manual"
@@ -240,11 +242,10 @@ export async function getTransferTransactionEditData(
     || from.memo !== to.memo || from.description !== to.description
     || (purpose === "general" && (!from.exclude_from_budget || !to.exclude_from_budget || from.saved_budget_bucket_id !== null))
     || (purpose !== "general" && (from.exclude_from_budget || to.exclude_from_budget))
-    || (impact && (impact.line_id !== from.line_id
-      || impact.budget_bucket_id !== from.saved_budget_bucket_id || impact.amount !== -from.amount))) {
+    || (impact && (impact.line_id !== from.line_id || (!closedImpact
+      && (impact.budget_bucket_id !== from.saved_budget_bucket_id || impact.amount !== -from.amount))))) {
     return null;
   }
-  const impactPeriod = impact ? periods.find((period) => period.id === impact.budget_period_id) : null;
   return {
     formData: {
       accounts: accounts.map((account) => ({
