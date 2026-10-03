@@ -20,7 +20,7 @@ const financeSnapshot = async () => ({
 const before = await financeSnapshot();
 if (!process.argv.includes('--red')) {
   let migration = await file('../migrations/202610030005_affairs_foundation.sql');
-  if (process.argv.includes('--red-rpcs')) migration=migration.split('-- AFFAIRS_PUBLIC_RPCS_START')[0]+'\ncommit;';
+  if (process.argv.includes('--red-rpcs') && migration.includes('-- AFFAIRS_PUBLIC_RPCS_START')) migration=migration.split('-- AFFAIRS_PUBLIC_RPCS_START')[0]+'\ncommit;';
   await db.exec(migration);
 }
 assert.equal((await one("select to_regclass('public.affairs_mainlines')::text name")).name,'affairs_mainlines','missing affairs_mainlines');
@@ -42,6 +42,7 @@ await db.exec("reset role; set role anon; set request.jwt.claim.role='anon'");
 await assert.rejects(db.exec('select * from affairs_mainlines'),/permission denied/);
 await db.exec('reset role');
 const hasRpcs=(await one("select count(*)::int n from pg_proc where proname='create_affairs_mainline'")).n;
-if(process.argv.includes('--red-rpcs')) assert.equal(hasRpcs,1,'missing create_affairs_mainline RPC');
+assert.equal(hasRpcs,1,'missing create_affairs_mainline RPC');
+await db.exec(await file('./affairs_foundation_rpcs.sql'));
 console.log('PASS affairs foundation: empty schema, auth FK, owner RLS, no direct writes, private isolation, Finance unchanged');
 await db.close();

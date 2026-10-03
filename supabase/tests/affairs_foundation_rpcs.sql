@@ -1,0 +1,34 @@
+-- Isolated behavioral tests; no production database URL accepted by runner.
+do $$ declare m uuid; p uuid; t uuid; r record; rid uuid:=gen_random_uuid(); oldrev bigint; b uuid; ms uuid; arr jsonb;
+begin
+ perform set_config('request.jwt.claim.role','authenticated',false);
+ perform set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000001',false);
+ select * into r from public.create_affairs_mainline(rid,'{"name":"  Main  ","description":"  "}'); m:=r.object_id;
+ select * into r from public.create_affairs_mainline(rid,'{"description":null,"name":"Main"}');
+ if not r.replayed then raise exception 'normalized replay failed'; end if;
+ begin perform public.create_affairs_mainline(rid,'{"name":"Other"}'); raise exception 'conflict accepted'; exception when others then if sqlerrm<>'request_payload_conflict' then raise; end if; end;
+ select * into r from public.create_affairs_project(gen_random_uuid(),jsonb_build_object('mainline_id',m,'name','Project','outcome','Result')); p:=r.object_id;
+ if (select progress_rate from vw_affairs_project_progress where id=p) is not null then raise exception 'zero milestone rate'; end if;
+ if (select due_date from affairs_projects where id=p) is not null then raise exception 'invented date'; end if;
+ select * into r from public.create_affairs_task(gen_random_uuid(),'{"title":"Independent"}'); t:=r.object_id;
+ begin perform public.update_affairs_task(gen_random_uuid(),t,1,'{"status":"done"}'); raise exception 'bypass accepted'; exception when others then if sqlerrm<>'invalid_payload' then raise; end if; end;
+ perform public.update_affairs_task(gen_random_uuid(),t,1,jsonb_build_object('title','Independent','project_id',p));
+ begin perform public.update_affairs_task(gen_random_uuid(),t,1,'{"title":"Stale"}'); raise exception 'stale accepted'; exception when others then if sqlerrm<>'stale_revision' then raise; end if; end;
+ arr:=(select jsonb_agg(jsonb_build_object('id',null,'expected_revision',null,'title','Stage '||i,'completion_criteria','Criterion','sort_order',i)) from generate_series(1,5)i);
+ perform public.save_affairs_milestones(gen_random_uuid(),p,1,arr);
+ for ms in select id from affairs_milestones where project_id=p order by sort_order limit 2 loop perform public.set_affairs_milestone_completed(gen_random_uuid(),ms,1,true); end loop;
+ if (select progress_rate from vw_affairs_project_progress where id=p)<>0.4 then raise exception 'rate not fraction'; end if;
+ perform public.record_affairs_progress(gen_random_uuid(),p,t,'Actual work','Next step',now()-interval '1 hour');
+ perform public.update_affairs_task(gen_random_uuid(),t,2,'{"title":"Independent","project_id":null}');
+ if (select project_id from affairs_progress_entries where task_id=t)<>p then raise exception 'history moved'; end if;
+ select revision into oldrev from affairs_projects where id=p;
+ begin perform public.set_affairs_project_status(gen_random_uuid(),p,oldrev,'completed',true); raise exception 'unfinished accepted'; exception when others then if sqlerrm<>'project_requires_completion' then raise; end if; end;
+ perform public.set_affairs_project_status(gen_random_uuid(),p,oldrev,'paused',false);
+ if (select count(*) from affairs_progress_entries where project_id=p)<>1 then raise exception 'pause contribution'; end if;
+ perform public.set_affairs_project_status(gen_random_uuid(),p,oldrev+1,'archived',false);
+ begin perform public.create_affairs_task(gen_random_uuid(),jsonb_build_object('title','Blocked','project_id',p)); raise exception 'archived accepted'; exception when others then if sqlerrm<>'invalid_state_transition' then raise; end if; end;
+ select id into b from affairs_mainlines where name='Owner B';
+ begin perform public.create_affairs_project(gen_random_uuid(),jsonb_build_object('name','Foreign','outcome','X','mainline_id',b)); raise exception 'cross owner accepted'; exception when others then if sqlerrm<>'not_found' then raise; end if; end;
+ perform set_config('request.jwt.claim.role','anon',false);
+ begin perform public.create_affairs_task(gen_random_uuid(),'{"title":"Anon"}'); raise exception 'anon accepted'; exception when others then if sqlerrm<>'authentication_required' then raise; end if; end;
+end $$;
