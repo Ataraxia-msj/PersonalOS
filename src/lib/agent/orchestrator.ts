@@ -28,16 +28,21 @@ const defaultDependencies: AgentDependencies = {
 function validOccurredAt(value: string | null, now: Date, issues: string[]) {
   if (!value) {
     issues.push("需要交易时间");
-    return;
+    return null;
   }
-  const normalized = value.length === 16 ? `${value}:00` : value;
-  const date = new Date(`${normalized}+08:00`);
-  if (!/^(?!0000)\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(normalized)
-    || !Number.isFinite(date.getTime()) || shanghaiDateTime(date) !== normalized) {
+  const local = value.length === 16 ? `${value}:00` : value;
+  const isLocal = /^(?!0000)\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(local);
+  const isOffset = /^(?!0000)\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/.test(value);
+  const date = new Date(isLocal ? `${local}+08:00` : value);
+  if ((!isLocal && !isOffset) || !Number.isFinite(date.getTime())
+    || (isLocal && shanghaiDateTime(date) !== local)) {
     issues.push("交易时间无效");
+    return null;
   } else if (date > now) {
     issues.push("日期不能晚于当前时间");
+    return null;
   }
+  return shanghaiDateTime(date).slice(0, 16);
 }
 
 function deriveDraft(
@@ -49,7 +54,7 @@ function deriveDraft(
 ): AgentTransactionDraft {
   const issues: string[] = [];
   if (model.amount === null) issues.push("需要准确金额");
-  validOccurredAt(model.occurredAt, now, issues);
+  const occurredAt = validOccurredAt(model.occurredAt, now, issues);
   if (!model.description?.trim()) issues.push("需要交易描述");
 
   const accounts = new Map(options.accounts.map((account) => [account.id, account]));
@@ -112,6 +117,7 @@ function deriveDraft(
     fromAccountId: model.type === "transfer" ? model.fromAccountId : null,
     fromAccountName: fromAccount?.name ?? null,
     issues,
+    occurredAt,
     purpose: model.type === "transfer" ? model.purpose : null,
     rawText,
     requestId: model.type === "expense" ? null : uuid(),

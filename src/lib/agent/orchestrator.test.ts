@@ -129,4 +129,18 @@ describe("interpretAgentMessage", () => {
       status: "needs_input",
     });
   });
+
+  it("normalizes an explicit provider timezone offset into Shanghai local time", async () => {
+    const result = await interpretAgentMessage("微信早餐12", new Date("2026-10-03T02:00:00Z"), dependencies({
+      message: "识别到一笔支出。",
+      transactions: [{ ...baseDraft, occurredAt: "2026-10-03T08:10+08:00" }],
+      unresolvedSegments: [],
+    }));
+
+    expect(result.transactions[0]).toMatchObject({
+      issues: [],
+      occurredAt: "2026-10-03T08:10",
+      status: "ready",
+    });
+  });
 });
