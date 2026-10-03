@@ -83,9 +83,14 @@ export function adaptAccountBalances(rows: AccountBalanceView[]): Account[] {
   }));
 }
 
-export function adaptTransactions(rows: TransactionDetailView[], currencies: Array<Pick<AccountBalanceView, "account_id" | "currency">> = []): Transaction[] {
+export function adaptTransactions(
+  rows: TransactionDetailView[],
+  currencies: Array<Pick<AccountBalanceView, "account_id" | "currency">> = [],
+  budgetBuckets: Array<Pick<BudgetBucketRow, "id" | "bucket_kind" | "is_active">> = [],
+): Transaction[] {
   const linesByEntry = new Map<string, TransactionDetailView[]>();
   const currencyByAccount = new Map(currencies.map((row) => [row.account_id, row.currency]));
+  const bucketById = new Map(budgetBuckets.map((row) => [row.id, row]));
 
   for (const row of rows) {
     const lines = linesByEntry.get(row.entry_id) ?? [];
@@ -103,6 +108,13 @@ export function adaptTransactions(rows: TransactionDetailView[], currencies: Arr
     const purpose = primaryLine.transfer_purpose ?? null;
     const sourceCurrency = currencyByAccount.get(primaryLine.account_id);
     const transferCurrency = sourceCurrency && orderedLines.every((line) => currencyByAccount.get(line.account_id) === sourceCurrency) ? sourceCurrency : null;
+    const savedTransferBucket = primaryLine.saved_budget_bucket_id
+      ? bucketById.get(primaryLine.saved_budget_bucket_id)
+      : null;
+    const validTransferBucket = purpose === "general"
+      ? primaryLine.saved_budget_bucket_id === null
+      : primaryLine.saved_budget_bucket_id === null
+        || (savedTransferBucket?.is_active === true && savedTransferBucket.bucket_kind === purpose);
     const supportedTransfer = isTransfer && purpose !== null && Object.hasOwn(transferLabels, purpose)
       && orderedLines.length === 2 && primaryLine.line_sort_order === 0 && destination.line_sort_order === 1
       && primaryLine.account_class === "asset" && primaryLine.account_id !== destination.account_id
@@ -154,7 +166,7 @@ export function adaptTransactions(rows: TransactionDetailView[], currencies: Arr
           && primaryLine.status === "confirmed"
           && orderedLines.length === 1)
         || supportedIncome
-        || supportedTransfer,
+        || (supportedTransfer && transferCurrency !== null && validTransferBucket),
       excludedFromBudget: primaryLine.exclude_from_budget,
       budgetLabel: primaryLine.exclude_from_budget
         ? "不计入预算"

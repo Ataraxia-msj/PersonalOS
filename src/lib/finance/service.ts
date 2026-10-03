@@ -52,12 +52,13 @@ import { shanghaiDate } from "./budget-validation";
 
 export async function getFinanceOverviewData(): Promise<FinanceOverviewData> {
   const client = await createClient();
-  const [netWorthRow, activeSummary, monthlySummaries, transactionLines, currencies] = await Promise.all([
+  const [netWorthRow, activeSummary, monthlySummaries, transactionLines, currencies, budgetBuckets] = await Promise.all([
     getNetWorth(client),
     getActiveMonthlySummary(client),
     getMonthlyFinancialSummaries(client),
     getRecentTransactions(client),
     getTransactionAccountCurrencies(client),
+    getBudgetBuckets(client),
   ]);
   const netWorth = adaptNetWorth(netWorthRow);
 
@@ -68,7 +69,7 @@ export async function getFinanceOverviewData(): Promise<FinanceOverviewData> {
     netWorth: netWorth?.net_worth ?? null,
     totalAssets: netWorth?.total_assets ?? null,
     totalLiabilities: netWorth?.total_liabilities ?? null,
-    transactions: adaptTransactions(transactionLines, currencies).slice(0, 4),
+    transactions: adaptTransactions(transactionLines, currencies, budgetBuckets).slice(0, 4),
   };
 }
 
@@ -100,20 +101,30 @@ export async function getTransactionsPageData(): Promise<{
   transactions: Transaction[];
 }> {
   const client = await createClient();
-  const [lines, currencies] = await Promise.all([getTransactions(client), getTransactionAccountCurrencies(client)]);
-  return { transactions: adaptTransactions(lines, currencies) };
+  const [lines, currencies, budgetBuckets] = await Promise.all([
+    getTransactions(client),
+    getTransactionAccountCurrencies(client),
+    getBudgetBuckets(client),
+  ]);
+  return { transactions: adaptTransactions(lines, currencies, budgetBuckets) };
 }
 
 export async function getAnalysisPageData(month?: string): Promise<FinanceAnalysisPageData> {
   const client = await createClient();
   const monthStart = month ? `${month}-01` : undefined;
-  const analysisRows = await getMonthlyFinancialAnalysis(client, monthStart);
+  const [analysisRows, periods] = await Promise.all([
+    getMonthlyFinancialAnalysis(client, monthStart),
+    getBudgetPeriods(client),
+  ]);
   const selected = monthStart
     ? analysisRows.find((row) => row.month === monthStart) ?? null
     : analysisRows[0] ?? null;
-  const availableMonths = analysisRows.map((row) => ({
-    label: `${row.month.slice(0, 4)}年${Number(row.month.slice(5, 7))}月`,
-    value: row.month.slice(0, 7),
+  const monthRows = periods.length > 0
+    ? periods.map((period) => period.start_date)
+    : analysisRows.map((row) => row.month);
+  const availableMonths = Array.from(new Set(monthRows)).toSorted((left, right) => right.localeCompare(left)).map((value) => ({
+    label: `${value.slice(0, 4)}年${Number(value.slice(5, 7))}月`,
+    value: value.slice(0, 7),
   }));
   if (!selected) {
     return {
@@ -123,14 +134,16 @@ export async function getAnalysisPageData(month?: string): Promise<FinanceAnalys
       currency: null,
       insights: [],
       selectedMonth: null,
+      snapshot: null,
       summary: null,
       trend: adaptAnalysisTrend(analysisRows),
     };
   }
-  const [categories, insights, execution] = await Promise.all([
+  const [categories, insights, execution, netWorth] = await Promise.all([
     getMonthlyCategorySpending(client, selected.month),
     getFinancialInsights(client, selected.month),
     getBudgetExecutionHistory(client),
+    getNetWorth(client),
   ]);
   const budget = adaptBudgetMonths(
     execution.filter((row) => row.budget_period_id === selected.budget_period_id),
@@ -143,6 +156,12 @@ export async function getAnalysisPageData(month?: string): Promise<FinanceAnalys
     currency: selected.currency,
     insights: adaptAnalysisInsights(insights),
     selectedMonth: selected.month.slice(0, 7),
+    snapshot: netWorth ? {
+      assets: netWorth.total_assets,
+      currency: netWorth.currency,
+      liabilities: netWorth.total_liabilities,
+      netWorth: netWorth.net_worth,
+    } : null,
     summary: adaptAnalysisSummary(selected),
     trend: adaptAnalysisTrend(analysisRows),
   };
@@ -274,6 +293,11 @@ export async function getTransferTransactionEditData(
   const impact = editRows.budgetImpacts[0] ?? null;
   const impactPeriod = impact ? periods.find((period) => period.id === impact.budget_period_id) : null;
   const closedImpact = impactPeriod?.status === "closed";
+  const fromAccount = from ? accounts.find((account) => account.account_id === from.account_id) : null;
+  const toAccount = to ? accounts.find((account) => account.account_id === to.account_id) : null;
+  const savedBucket = from?.saved_budget_bucket_id
+    ? buckets.find((bucket) => bucket.id === from.saved_budget_bucket_id)
+    : null;
   if (ordered.length !== 2 || editRows.budgetImpacts.length > 1 || !from || !to
     || from.entry_id !== entryId || to.entry_id !== entryId || from.entry_type !== "transfer"
     || to.entry_type !== "transfer" || from.source !== "manual" || to.source !== "manual"
@@ -281,12 +305,15 @@ export async function getTransferTransactionEditData(
     || to.related_entry_id !== null || !purpose || !transferPurposes.has(purpose)
     || to.transfer_purpose !== purpose || from.line_sort_order !== 0 || to.line_sort_order !== 1
     || from.account_class !== "asset" || to.account_class !== (purpose === "debt" ? "liability" : "asset")
+    || !fromAccount || !toAccount || fromAccount.currency !== toAccount.currency
     || from.account_id === to.account_id || from.amount >= 0
     || to.amount !== (purpose === "debt" ? from.amount : -from.amount)
     || from.category_id !== null || to.category_id !== null || to.saved_budget_bucket_id !== null
     || from.memo !== to.memo || from.description !== to.description
     || (purpose === "general" && (!from.exclude_from_budget || !to.exclude_from_budget || from.saved_budget_bucket_id !== null))
     || (purpose !== "general" && (from.exclude_from_budget || to.exclude_from_budget))
+    || (from.saved_budget_bucket_id !== null
+      && (!savedBucket || !savedBucket.is_active || savedBucket.bucket_kind !== purpose))
     || (impact && (impact.line_id !== from.line_id || (!closedImpact
       && (impact.budget_bucket_id !== from.saved_budget_bucket_id || impact.amount !== -from.amount))))) {
     return null;

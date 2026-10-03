@@ -151,6 +151,7 @@ export interface FinanceAnalysisPageData {
   availableMonths: Array<{ value: string; label: string }>;
   selectedMonth: string | null;
   currency: string | null;
+  snapshot: { assets: number; liabilities: number; netWorth: number; currency: string } | null;
   summary: {
     income: AnalysisMetric;
     expense: AnalysisMetric;

@@ -19,7 +19,7 @@ $preflight$;
 
 create view public.vw_financial_insights
 with (security_invoker = true) as
-with expense_facts as (
+with expense_line_facts as (
   select
     je.id as entry_id,
     je.occurred_at,
@@ -40,11 +40,29 @@ with expense_facts as (
   join public.accounts a on a.id = jl.account_id
   join public.categories c on c.id = jl.category_id and c.category_type = 'expense'
   where je.entry_type = 'expense' and je.status = 'confirmed' and je.occurred_at <= now()
+), expense_facts as (
+  select
+    f.entry_id,
+    f.occurred_at,
+    f.month,
+    f.description,
+    f.exclude_from_budget,
+    case when count(distinct f.currency) = 1 then min(f.currency) else null::text end as currency,
+    case when count(distinct f.category_id) = 1 then min(f.category_id::text)::uuid else null::uuid end as category_id,
+    case when count(distinct f.category_id) = 1 then min(f.category_name) else null::text end as category_name,
+    sum(f.amount) as amount
+  from expense_line_facts f
+  group by f.entry_id, f.occurred_at, f.month, f.description, f.exclude_from_budget
 ), unbudgeted as (
   select f.month, f.currency, sum(f.amount) as amount, count(distinct f.entry_id) as transaction_count
-  from expense_facts f
+  from expense_line_facts f
   left join public.budget_impacts bi on bi.entry_id = f.entry_id and bi.line_id = f.line_id
   where not f.exclude_from_budget and f.amount > 0 and bi.id is null
+    and not exists (
+      select 1 from public.budget_periods bp
+      where bp.currency = f.currency
+        and (f.occurred_at at time zone 'Asia/Shanghai')::date between bp.start_date and bp.end_date
+    )
   group by f.month, f.currency
 ), anomaly_candidates as (
   select
@@ -71,6 +89,7 @@ with expense_facts as (
       and prior.occurred_at >= f.occurred_at - interval '12 months'
       and prior.amount > 0
   ) history on true
+  where f.category_id is not null and f.currency is not null
 ), fixed_bucket as (
   select id from public.budget_buckets
   where is_active and bucket_kind = 'expense' and name in ('固定必要开销', '固定必要')
@@ -118,8 +137,8 @@ from public.vw_budget_execution v where v.execution_rate > 100
 
 union all
 select 'unbudgeted:' || u.month || ':' || u.currency, u.month, u.currency,
-  'unbudgeted_spending', 'reminder', '存在未计入预算的消费',
-  u.transaction_count || ' 笔消费合计 ' || u.amount || '，且没有预算影响记录。',
+  'unbudgeted_spending', 'reminder', '存在尚未建立预算月份的消费',
+  u.transaction_count || ' 笔消费合计 ' || u.amount || '，当月没有对应预算。',
   u.amount, null::numeric, null::uuid, null::uuid, null::uuid, null::uuid
 from unbudgeted u
 

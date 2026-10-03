@@ -20,7 +20,7 @@ const transactions: Transaction[] = [
 ];
 const emptyAnalysis: FinanceAnalysisPageData = {
   availableMonths: [], budgetSections: [], categories: [], currency: null, insights: [],
-  selectedMonth: null, summary: null, trend: [],
+  selectedMonth: null, snapshot: null, summary: null, trend: [],
 };
 
 describe("Finance supporting sections", () => {

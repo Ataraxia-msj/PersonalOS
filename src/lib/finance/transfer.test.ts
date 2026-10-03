@@ -133,7 +133,9 @@ describe("transfer grouping", () => {
     ]);
   });
   it.each(["general", "saving", "investment", "debt"] as const)("shows %s once with neutral positive magnitude and both accounts", (purpose) => {
-    const [row] = adaptTransactions(pair(purpose).reverse());
+    const currencies = [ids[1], ids[2]].map((id) => ({ account_id: id, currency: "CNY" }));
+    const buckets = purpose === "general" ? [] : [{ id: ids[3], bucket_kind: purpose, is_active: true }];
+    const [row] = adaptTransactions(pair(purpose).reverse(), currencies, buckets);
     expect(row).toMatchObject({ accountName: "银行 → 目标账户", amount: 123.45, editable: true, entryType: "transfer",
       date: "2026-09-08", transfer: { purpose, legacy: false }, accounts: [{ id: ids[1], name: "银行" }, { id: ids[2], name: "目标账户" }],
     });

@@ -29,7 +29,7 @@ export function SpendingAnalysis({ data }: { data: FinanceAnalysisPageData }) {
         <p className={styles.emptyState}>暂无可分析的月度财务数据</p>
       ) : (
         <>
-          <AnalysisSummary summary={data.summary} />
+          <AnalysisSummary snapshot={data.snapshot} summary={data.summary} />
           <AnalysisTrendChart points={data.trend} />
           <div className={styles.analysisTwoColumn}>
             <AnalysisBudgetSection sections={data.budgetSections} />

@@ -402,11 +402,25 @@ describe("Finance View adapters", () => {
       account_id: "account-savings", account_name: "储蓄账户", saved_budget_bucket_id: null,
     });
     const [editableIncome] = adaptTransactions([income]);
-    const [editableTransfer] = adaptTransactions([transferFrom, transferTo]);
-    const [malformedTransfer] = adaptTransactions([transferFrom, { ...transferTo, amount: 499 }]);
+    const matchingCurrencies = [
+      { account_id: transferFrom.account_id, currency: "CNY" },
+      { account_id: transferTo.account_id, currency: "CNY" },
+    ];
+    const savingBucket = [{ id: "saving", bucket_kind: "saving" as const, is_active: true }];
+    const [editableTransfer] = adaptTransactions([transferFrom, transferTo], matchingCurrencies, savingBucket);
+    const [wrongBucketKind] = adaptTransactions([transferFrom, transferTo], matchingCurrencies, [{
+      id: "saving", bucket_kind: "investment", is_active: true,
+    }]);
+    const [malformedTransfer] = adaptTransactions([transferFrom, { ...transferTo, amount: 499 }], matchingCurrencies);
+    const [crossCurrencyTransfer] = adaptTransactions([transferFrom, transferTo], [
+      { account_id: transferFrom.account_id, currency: "CNY" },
+      { account_id: transferTo.account_id, currency: "USD" },
+    ]);
     expect(editableIncome).toMatchObject({ editable: true, entryType: "income" });
     expect(editableTransfer).toMatchObject({ editable: true, entryType: "transfer" });
+    expect(wrongBucketKind).toMatchObject({ editable: false, entryType: "transfer" });
     expect(malformedTransfer.editable).toBe(false);
+    expect(crossCurrencyTransfer.editable).toBe(false);
   });
 
   it("maps the View budget period and bucket into a transaction label", () => {

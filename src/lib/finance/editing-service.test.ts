@@ -108,4 +108,12 @@ describe("transaction editing services", () => {
       initialValues: { purpose: "general", amount: 99, budgetLocked: true },
     });
   });
+
+  it("rejects cross-currency transfers and saved buckets whose kind does not match the purpose", async () => {
+    d.accounts.mockResolvedValueOnce([accounts[0], { ...accounts[1], currency: "USD" }]);
+    await expect(getTransferTransactionEditData(ids[0])).resolves.toBeNull();
+
+    d.buckets.mockResolvedValueOnce([{ id: ids[3], name: "投资", bucket_kind: "investment", is_active: true }]);
+    await expect(getTransferTransactionEditData(ids[0])).resolves.toBeNull();
+  });
 });

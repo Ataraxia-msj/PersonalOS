@@ -7,7 +7,7 @@ import AnalysisPage from "./page";
 vi.mock("@/lib/finance/service", () => ({ getAnalysisPageData: vi.fn() }));
 
 const empty = { availableMonths: [], budgetSections: [], categories: [], currency: null,
-  insights: [], selectedMonth: null, summary: null, trend: [] };
+  insights: [], selectedMonth: null, snapshot: null, summary: null, trend: [] };
 
 describe("AnalysisPage", () => {
   beforeEach(() => vi.mocked(getAnalysisPageData).mockResolvedValue(empty));

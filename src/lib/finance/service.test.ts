@@ -245,10 +245,19 @@ describe("Finance service", () => {
   });
 
   it("honors an explicit available month without silently substituting another month", async () => {
+    vi.mocked(getBudgetPeriods).mockResolvedValue([
+      { id: "period-2026-09", start_date: "2026-09-01", end_date: "2026-09-30", planned_income: 1,
+        currency: "CNY", status: "active", note: null, created_at: "", updated_at: "" },
+      { id: "period-2026-08", start_date: "2026-08-01", end_date: "2026-08-31", planned_income: 1,
+        currency: "CNY", status: "closed", note: null, created_at: "", updated_at: "" },
+    ]);
     vi.mocked(getMonthlyFinancialAnalysis).mockResolvedValue([
       analysisRow({ month: "2026-08-01", budget_period_id: "period-2026-08" }),
     ]);
-    await expect(getAnalysisPageData("2026-08")).resolves.toMatchObject({ selectedMonth: "2026-08" });
+    await expect(getAnalysisPageData("2026-08")).resolves.toMatchObject({
+      selectedMonth: "2026-08",
+      availableMonths: [{ value: "2026-09" }, { value: "2026-08" }],
+    });
     expect(getMonthlyFinancialAnalysis).toHaveBeenCalledWith(client, "2026-08-01");
 
     vi.mocked(getMonthlyFinancialAnalysis).mockResolvedValue([

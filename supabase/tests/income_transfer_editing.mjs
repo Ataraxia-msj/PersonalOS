@@ -101,6 +101,13 @@ await test('income edit updates exactly one entry and line without budget impact
   assert.equal((await sql('select 1 from budget_impacts where entry_id=$1', [created.entry_id])).length, 0);
 });
 
+await test('income edit preserves hidden raw text when the form does not submit a replacement', async () => {
+  const created = await createIncome({ raw: 'original provenance' });
+  await updateIncome(created.entry_id, { raw: null });
+  const entry = await one('select raw_text from journal_entries where id=$1', [created.entry_id]);
+  assert.equal(entry.raw_text, 'original provenance');
+});
+
 await test('income edit rejects invalid structure and inactive or wrong references atomically', async () => {
   const created = await createIncome();
   const before = await one('select description from journal_entries where id=$1', [created.entry_id]);
@@ -186,6 +193,16 @@ await test('malformed, wrong-currency and injected-failure edits roll back atomi
   await rejects(() => updateTransfer(failing.entry_id), /injected_update_failure/);
   const entry = await one('select description,transfer_purpose from journal_entries where id=$1', [failing.entry_id]);
   assert.equal(entry.description, 'move'); assert.equal(entry.transfer_purpose, 'general');
+});
+
+await test('transfer edit rejects a persisted bucket whose kind no longer matches its purpose', async () => {
+  const created = await createTransfer({ purpose: 'saving', bucket: bucket.saving });
+  await sql("update budget_buckets set bucket_kind='investment' where id=$1", [bucket.saving]);
+  await rejects(() => updateTransfer(created.entry_id, {
+    purpose: 'investment', bucket: bucket.investment,
+  }), /transfer_entry_structure_invalid/);
+  const entry = await one('select transfer_purpose from journal_entries where id=$1', [created.entry_id]);
+  assert.equal(entry.transfer_purpose, 'saving');
 });
 
 await test('anon and missing authenticated identity cannot edit', async () => {

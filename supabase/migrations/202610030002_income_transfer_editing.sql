@@ -97,7 +97,7 @@ begin
   update public.journal_entries e
   set occurred_at = p_occurred_at,
       description = v_description,
-      raw_text = v_raw_text
+      raw_text = coalesce(v_raw_text, e.raw_text)
   where e.id = p_entry_id;
 
   update public.journal_lines l
@@ -156,6 +156,7 @@ declare
   v_from public.accounts%rowtype;
   v_to public.accounts%rowtype;
   v_bucket public.budget_buckets%rowtype;
+  v_existing_bucket public.budget_buckets%rowtype;
   v_period public.budget_periods%rowtype;
   v_impact public.budget_impacts%rowtype;
   v_line_ids uuid[];
@@ -219,6 +220,14 @@ begin
     or v_from_line.category_id is not null or v_to_line.category_id is not null
     or v_to_line.budget_bucket_id is not null then
     raise exception 'transfer_entry_structure_invalid' using errcode = 'P0001';
+  end if;
+  if v_from_line.budget_bucket_id is not null then
+    select bb.* into v_existing_bucket from public.budget_buckets bb
+    where bb.id = v_from_line.budget_bucket_id for share;
+    if not found or not v_existing_bucket.is_active
+      or v_existing_bucket.bucket_kind <> v_entry.transfer_purpose then
+      raise exception 'transfer_entry_structure_invalid' using errcode = 'P0001';
+    end if;
   end if;
   select a.* into v_old_from from public.accounts a where a.id = v_from_line.account_id;
   select a.* into v_old_to from public.accounts a where a.id = v_to_line.account_id;

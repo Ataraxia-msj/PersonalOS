@@ -6,10 +6,11 @@ import styles from "./finance.module.css";
 export function AnalysisTrendChart({ points }: { points: AnalysisTrendPoint[] }) {
   if (points.length === 0) return <section className={styles.analysisPanel}><h3>12 个月趋势</h3><p className={styles.analysisEmpty}>暂无趋势数据</p></section>;
   const maximum = Math.max(1, ...points.flatMap((point) => [point.income, point.expense, Math.abs(point.balance)]));
+  const accessibleSummary = points.map((point) => `${point.label}收入${point.income}，支出${point.expense}，结余${point.balance}`).join("；");
   return (
     <section className={styles.analysisPanel}>
       <div className={styles.analysisSectionTitle}><div><h3>12 个月趋势</h3><p>收入、支出与现金结余</p></div><div className={styles.analysisLegend}><span>收入</span><span>支出</span><span>结余</span></div></div>
-      <div aria-label="近 12 个月收入、支出与结余趋势" className={styles.analysisChart} role="img">
+      <div aria-label={`近 12 个月收入、支出与结余趋势：${accessibleSummary}`} className={styles.analysisChart} role="img">
         {points.map((point) => (
           <div className={styles.analysisChartMonth} key={point.month} title={`${point.label}：收入 ${point.income}，支出 ${point.expense}，结余 ${point.balance}`}>
             <div className={styles.analysisChartBars}>
