@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-import type { Database } from "@/lib/finance/types";
+import type { Database } from "./database.types";
 
 import { getSupabaseConfig } from "./config";
 

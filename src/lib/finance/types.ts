@@ -1,5 +1,4 @@
-import type { BalanceSnapshotRow, ReconciliationPreviewRow, ReconciliationResult, ReconciliationSaveArgs } from "./reconciliation-types";
-import type { TransferArgs, TransferPurpose, TransferResult, UpdateTransferArgs, UpdateTransferResult } from "./transfer-types";
+import type { TransferPurpose } from "./transfer-types";
 
 export type AccountClass = "asset" | "liability";
 
@@ -392,83 +391,7 @@ export type UpdateIncomeTransactionRow = {
   line_id: string;
 };
 
-type ViewDefinition<Row> = {
-  Row: Row & Record<string, unknown>;
-  Relationships: [];
-};
-
-type TableDefinition<Row> = {
-  Row: Row & Record<string, unknown>;
-  Insert: Partial<Row> & Record<string, unknown>;
-  Update: Partial<Row> & Record<string, unknown>;
-  Relationships: [];
-};
-
-export interface Database {
-  public: {
-    Tables: {
-      accounts: TableDefinition<AccountRow>;
-      balance_snapshots: TableDefinition<BalanceSnapshotRow>;
-      budget_buckets: TableDefinition<BudgetBucketRow>;
-      budget_periods: TableDefinition<BudgetPeriodRow>;
-      budget_allocations: TableDefinition<BudgetAllocationRow>;
-      budget_impacts: TableDefinition<BudgetImpactRow>;
-      categories: TableDefinition<ExpenseCategoryRow>;
-      journal_entries: TableDefinition<JournalEntryRow>;
-      journal_lines: TableDefinition<JournalLineRow>;
-    };
-    Views: {
-      vw_net_worth: ViewDefinition<NetWorthView>;
-      vw_account_balances: ViewDefinition<AccountBalanceView>;
-      vw_budget_execution: ViewDefinition<BudgetExecutionView>;
-      vw_monthly_financial_summary: ViewDefinition<MonthlyFinancialSummaryView>;
-      vw_monthly_financial_analysis: ViewDefinition<MonthlyFinancialAnalysisView>;
-      vw_monthly_category_spending: ViewDefinition<MonthlyCategorySpendingView>;
-      vw_financial_insights: ViewDefinition<FinancialInsightView>;
-      vw_transaction_details: ViewDefinition<TransactionDetailView>;
-    };
-    Functions: {
-      create_account: {
-        Args: CreateAccountArgs;
-        Returns: CreateAccountRow[];
-      };
-      create_category: { Args: CreateCategoryArgs; Returns: CreateCategoryRow[] };
-      create_income_transaction: {
-        Args: CreateIncomeTransactionArgs;
-        Returns: CreateIncomeTransactionRow[];
-      };
-      update_income_transaction: {
-        Args: UpdateIncomeTransactionArgs;
-        Returns: UpdateIncomeTransactionRow[];
-      };
-      create_transfer_transaction: { Args: TransferArgs; Returns: TransferResult[] };
-      update_transfer_transaction: { Args: UpdateTransferArgs; Returns: UpdateTransferResult[] };
-      preview_balance_reconciliation: { Args: { p_account_id: string; p_snapshot_at: string }; Returns: ReconciliationPreviewRow[] };
-      reconcile_account_balance: { Args: ReconciliationSaveArgs; Returns: ReconciliationResult[] };
-      save_monthly_budget: { Args: SaveMonthlyBudgetArgs; Returns: SaveMonthlyBudgetRow[] };
-      create_expense_transaction: {
-        Args: CreateExpenseTransactionArgs;
-        Returns: CreateExpenseTransactionRow[];
-      };
-      update_expense_transaction: {
-        Args: UpdateExpenseTransactionArgs;
-        Returns: UpdateExpenseTransactionRow[];
-      };
-      set_account_active: {
-        Args: SetAccountActiveArgs;
-        Returns: SetAccountActiveRow[];
-      };
-      set_category_active: { Args: SetCategoryActiveArgs; Returns: SetCategoryActiveRow[] };
-      update_account: {
-        Args: UpdateAccountArgs;
-        Returns: UpdateAccountRow[];
-      };
-      update_category: { Args: UpdateCategoryArgs; Returns: UpdateCategoryRow[] };
-    };
-    Enums: Record<string, never>;
-    CompositeTypes: Record<string, never>;
-  };
-}
+export type { Database } from '@/lib/supabase/database.types';
 
 export interface BudgetBucketRow {
   id: string;
