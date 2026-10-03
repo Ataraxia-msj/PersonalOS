@@ -10,7 +10,7 @@ import {
   type IncomeActionState,
 } from "@/lib/finance/income-types";
 
-import { formatCurrency } from "../format";
+import { formatCurrencyValue } from "../format";
 import type { IncomeTransactionFormData, IncomeTransactionInitialValues } from "../types";
 import styles from "./finance.module.css";
 
@@ -93,7 +93,7 @@ export function IncomeTransactionForm({ action, data, defaultOccurredAt, initial
                 ? <option value={initialValues.accountId}>原账户（当前不可用）</option> : null}
               {data.accounts.map((account) => (
                 <option key={account.id} value={account.id}>
-                  {account.name} · {formatCurrency(account.balance, 2)}
+                  {account.name} · {formatCurrencyValue(account.balance, 2)}
                 </option>
               ))}
             </select>

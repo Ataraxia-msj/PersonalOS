@@ -60,4 +60,15 @@ describe("Finance analysis dashboard", () => {
     expect(screen.getByText("暂无可分析的月度财务数据")).toBeVisible();
     expect(screen.queryByText("¥12,000")).not.toBeInTheDocument();
   });
+
+  it("preserves negative signs for cash balance and net worth values", () => {
+    render(<SpendingAnalysis data={{
+      ...data,
+      snapshot: { ...data.snapshot!, netWorth: -180000 },
+      summary: { ...data.summary!, balance: { ...data.summary!.balance, value: -742 }, netWorth: -1200 },
+    }} />);
+    expect(screen.getByText("-¥742")).toBeVisible();
+    expect(screen.getByText("-¥1,200")).toBeVisible();
+    expect(screen.getByText("-¥180,000")).toBeVisible();
+  });
 });

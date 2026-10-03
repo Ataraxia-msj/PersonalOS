@@ -35,6 +35,10 @@ export function formatSignedCurrency(value: number): string {
   return `${sign}${formatCurrency(value)}`;
 }
 
+export function formatCurrencyValue(value: number, fractionDigits = 0): string {
+  return `${value < 0 ? "-" : ""}${formatCurrency(value, fractionDigits)}`;
+}
+
 export function formatShortDate(value: string): string {
   const [, month, day] = value.split("-");
   return `${month}-${day}`;

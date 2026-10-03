@@ -12,7 +12,7 @@ import {
 } from "@tabler/icons-react";
 import Link from "next/link";
 
-import { formatCurrency, formatShortDate, formatTransactionAmount } from "../format";
+import { formatCurrency, formatCurrencyValue, formatShortDate, formatTransactionAmount } from "../format";
 import type { FinanceOverviewData, TransactionIcon } from "../types";
 import styles from "./finance.module.css";
 import { TrendChart } from "./trend-chart";
@@ -38,15 +38,15 @@ export function FinanceOverview({ data }: FinanceOverviewProps) {
   const trendPeriod = data.cashflow.length > 0
     ? `${data.cashflow[0]?.month}至${data.cashflow.at(-1)?.month}`
     : "暂无月度数据";
-  const formatNullableCurrency = (value: number | null, fractionDigits = 0) =>
-    value === null ? "—" : formatCurrency(value, fractionDigits);
+  const formatNullableCurrency = (value: number | null, fractionDigits = 0, directional = false) =>
+    value === null ? "—" : directional ? formatCurrencyValue(value, fractionDigits) : formatCurrency(value, fractionDigits);
 
   return (
     <div className={styles.overviewGrid}>
       <div className={styles.overviewMain}>
         <section aria-labelledby="asset-heading" className={styles.assetSummary}>
           <p id="asset-heading">净资产</p>
-          <strong>{formatNullableCurrency(data.netWorth, 2)}</strong>
+          <strong>{formatNullableCurrency(data.netWorth, 2, true)}</strong>
           <div className={styles.netWorthDetails}>
             <div>
               <span>总资产</span>

@@ -10,7 +10,7 @@ import {
   type ExpenseTransactionActionState,
 } from "@/lib/finance/action-state";
 
-import { formatCurrency } from "../format";
+import { formatCurrencyValue } from "../format";
 import type {
   ExpenseTransactionFormData,
   ExpenseTransactionInitialValues,
@@ -153,7 +153,7 @@ export function ExpenseTransactionForm({
             >
               {data.accounts.map((account) => (
                 <option key={account.id} value={account.id}>
-                  {account.name} · {formatCurrency(account.balance, 2)}
+                  {account.name} · {formatCurrencyValue(account.balance, 2)}
                 </option>
               ))}
             </select>
