@@ -44,3 +44,26 @@ export interface AgentInterpretationContext {
     kind: "expense" | "saving" | "investment" | "debt" | "other";
   }>;
 }
+
+export type AgentFinanceOptions = Omit<AgentInterpretationContext, "nowShanghai" | "rawText">;
+
+export type AgentDraftStatus = "ready" | "needs_input";
+
+export interface AgentTransactionDraft extends ModelTransactionDraft {
+  draftId: string;
+  requestId: string | null;
+  rawText: string;
+  status: AgentDraftStatus;
+  issues: string[];
+  accountName: string | null;
+  categoryName: string | null;
+  budgetBucketName: string | null;
+  fromAccountName: string | null;
+  toAccountName: string | null;
+}
+
+export interface AgentInterpretation {
+  message: string;
+  transactions: AgentTransactionDraft[];
+  unresolvedSegments: string[];
+}

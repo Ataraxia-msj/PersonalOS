@@ -32,6 +32,7 @@ import {
   getFinanceOverviewData,
   getExpenseTransactionFormData,
   getIncomeTransactionFormData,
+  getAgentFinanceOptions,
   getExpenseTransactionEditData,
   getTransactionsPageData,
 } from "./service";
@@ -315,6 +316,37 @@ describe("Finance service", () => {
     expect(createClient).toHaveBeenCalledOnce();
     expect(getAccountBalances).toHaveBeenCalledWith(client);
     expect(getIncomeCategories).toHaveBeenCalledWith(client);
+  });
+
+  it("loads minimal Agent options concurrently through one server client", async () => {
+    vi.mocked(getAccountBalances).mockResolvedValue([{
+      account_class: "asset", account_id: "wechat", account_name: "微信", account_type: "ewallet",
+      balance_source: "ledger_only", currency: "CNY", estimated_balance: 12, include_in_net_worth: true,
+      institution: null, is_active: true, latest_snapshot_at: null, latest_snapshot_balance: null,
+      ledger_change_after_snapshot: 12, sort_order: 0,
+    }]);
+    vi.mocked(getExpenseCategories).mockResolvedValue([{
+      id: "food", name: "餐饮", category_type: "expense", parent_id: null,
+      default_budget_bucket_id: "variable", is_active: true, sort_order: 0, note: null,
+      created_at: "", updated_at: "",
+    }]);
+    vi.mocked(getIncomeCategories).mockResolvedValue([{
+      id: "salary", name: "工资", category_type: "income", parent_id: null,
+      default_budget_bucket_id: null, is_active: true, sort_order: 0, note: null,
+      created_at: "", updated_at: "",
+    }]);
+    vi.mocked(getBudgetBuckets).mockResolvedValue([{
+      id: "variable", name: "变动必要开销", bucket_kind: "expense", is_active: true,
+      sort_order: 0, note: null, created_at: "", updated_at: "",
+    }]);
+
+    await expect(getAgentFinanceOptions()).resolves.toEqual({
+      accounts: [{ accountClass: "asset", currency: "CNY", id: "wechat", name: "微信" }],
+      budgetBuckets: [{ id: "variable", kind: "expense", name: "变动必要开销" }],
+      expenseCategories: [{ defaultBudgetBucketId: "variable", id: "food", name: "餐饮" }],
+      incomeCategories: [{ id: "salary", name: "工资" }],
+    });
+    expect(createClient).toHaveBeenCalledOnce();
   });
 
   it("builds editable transaction values from one grouped manual expense", async () => {

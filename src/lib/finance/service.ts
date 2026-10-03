@@ -11,6 +11,7 @@ import type {
   Transaction,
 } from "@/features/finance/types";
 import type { TransferTransactionEditData, TransferPurpose } from "./transfer-types";
+import type { AgentFinanceOptions } from "@/lib/agent/types";
 import { createClient } from "@/lib/supabase/server";
 
 import {
@@ -185,6 +186,38 @@ export async function getIncomeTransactionFormData(): Promise<IncomeTransactionF
     getIncomeCategories(client),
   ]);
   return adaptIncomeTransactionFormData(accounts, categories);
+}
+
+export async function getAgentFinanceOptions(): Promise<AgentFinanceOptions> {
+  const client = await createClient();
+  const [accounts, expenseCategories, incomeCategories, budgetBuckets] = await Promise.all([
+    getAccountBalances(client),
+    getExpenseCategories(client),
+    getIncomeCategories(client),
+    getBudgetBuckets(client),
+  ]);
+  return {
+    accounts: accounts.filter((row) => row.is_active).map((row) => ({
+      accountClass: row.account_class,
+      currency: row.currency,
+      id: row.account_id,
+      name: row.account_name,
+    })),
+    budgetBuckets: budgetBuckets.filter((row) => row.is_active).map((row) => ({
+      id: row.id,
+      kind: row.bucket_kind,
+      name: row.name,
+    })),
+    expenseCategories: expenseCategories.filter((row) => row.is_active).map((row) => ({
+      defaultBudgetBucketId: row.default_budget_bucket_id,
+      id: row.id,
+      name: row.name,
+    })),
+    incomeCategories: incomeCategories.filter((row) => row.is_active).map((row) => ({
+      id: row.id,
+      name: row.name,
+    })),
+  };
 }
 
 function formatShanghaiDateTimeLocal(value: string) {
