@@ -65,16 +65,20 @@ function normalizedOccurredAt(value: string | null, now: Date): string | null {
   return date.toISOString();
 }
 
-function commonValidation(draft: AgentTransactionDraft, now: Date) {
+type CommonValidation =
+  | { ok: false; error: string }
+  | { ok: true; amount: number; description: string; occurredAt: string };
+
+function commonValidation(draft: AgentTransactionDraft, now: Date): CommonValidation {
   const amountCents = draft.amount === null ? null : moneyToCents(String(draft.amount));
-  if (amountCents === null || amountCents <= 0) return { error: "交易金额无效，请重新描述后生成预览。" } as const;
+  if (amountCents === null || amountCents <= 0) return { error: "交易金额无效，请重新描述后生成预览。", ok: false };
   const occurredAt = normalizedOccurredAt(draft.occurredAt, now);
-  if (!occurredAt) return { error: "交易时间无效或晚于当前时间，请重新生成预览。" } as const;
+  if (!occurredAt) return { error: "交易时间无效或晚于当前时间，请重新生成预览。", ok: false };
   const description = draft.description?.trim() ?? "";
-  if (!description || [...description].length > 1000) return { error: "交易描述无效，请重新生成预览。" } as const;
-  if (draft.memo && [...draft.memo].length > 1000) return { error: "交易备注过长，请重新生成预览。" } as const;
-  if (!draft.rawText.trim() || [...draft.rawText].length > 4000) return { error: "原始输入无效，请重新提交。" } as const;
-  return { amount: amountCents / 100, description, occurredAt } as const;
+  if (!description || [...description].length > 1000) return { error: "交易描述无效，请重新生成预览。", ok: false };
+  if (draft.memo && [...draft.memo].length > 1000) return { error: "交易备注过长，请重新生成预览。", ok: false };
+  if (!draft.rawText.trim() || [...draft.rawText].length > 4000) return { error: "原始输入无效，请重新提交。", ok: false };
+  return { amount: amountCents / 100, description, occurredAt, ok: true };
 }
 
 function expenseResult(result: CreateExpenseTransactionResult): AgentConfirmationResult {
@@ -115,7 +119,7 @@ export async function confirmAgentTransaction(
   dependencies: ConfirmationDependencies = defaultDependencies,
 ): Promise<AgentConfirmationResult> {
   const common = commonValidation(draft, now);
-  if ("error" in common) return invalid(common.error);
+  if (!common.ok) return invalid(common.error);
 
   const accounts = new Map(options.accounts.map((account) => [account.id, account]));
   const buckets = new Map(options.budgetBuckets.map((bucket) => [bucket.id, bucket]));

@@ -8,6 +8,7 @@ import { QwenProviderError } from "@/lib/agent/qwen";
 import { getAgentFinanceOptions } from "@/lib/finance/service";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import type { AgentTransactionDraft } from "@/lib/agent/types";
 
 import { confirmAgentTransactionAction, interpretAgentMessageAction } from "./agent-actions";
 
@@ -24,7 +25,7 @@ const interpretation = {
   transactions: [{ draftId: "draft-1" }, { draftId: "draft-2" }],
   unresolvedSegments: [],
 } as never;
-const draft = {
+const draft: AgentTransactionDraft = {
   accountId: "10000000-0000-4000-8000-000000000001",
   accountName: "微信",
   amount: 12,
@@ -48,7 +49,7 @@ const draft = {
   toAccountId: null,
   toAccountName: null,
   type: "expense",
-} as const;
+};
 
 describe("interpretAgentMessageAction", () => {
   beforeEach(() => {

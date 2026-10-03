@@ -3,7 +3,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { AgentInterpretationContext } from "./types";
-import { interpretFinanceMessage, QwenProviderError } from "./qwen";
+import { interpretFinanceMessage } from "./qwen";
 
 const context: AgentInterpretationContext = {
   accounts: [{ accountClass: "asset", currency: "CNY", id: "account-1", name: "微信" }],
@@ -94,7 +94,7 @@ describe("interpretFinanceMessage", () => {
   });
 
   it("aborts a provider request that exceeds the timeout", async () => {
-    const fetcher = vi.fn((_url: string, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
+    const fetcher = vi.fn<typeof fetch>((_url, init) => new Promise<Response>((_resolve, reject) => {
       init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
     }));
 
@@ -104,6 +104,6 @@ describe("interpretFinanceMessage", () => {
       fetcher,
       model: "qwen-test",
       timeoutMs: 5,
-    })).rejects.toEqual(expect.objectContaining<QwenProviderError>({ code: "provider_timeout" }));
+    })).rejects.toMatchObject({ code: "provider_timeout" });
   });
 });
