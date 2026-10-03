@@ -1,5 +1,6 @@
 
 .page{max-width:var(--content-max);margin:0 auto;padding:36px var(--page-gutter) 72px}
+.tableScroll{overflow-x:auto;margin:28px 0}.ledger{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--divider)}.ledger th{text-align:left;color:var(--text-secondary);font-size:13px;font-weight:400;padding:16px 22px;border-bottom:1px solid var(--divider)}.ledger td{padding:20px 22px;border-bottom:1px solid var(--divider);vertical-align:top}.ledger td:first-child{min-width:210px}.ledger td small{display:block;color:var(--text-secondary);font-size:12px;margin-top:6px;white-space:nowrap}.ledger td:nth-child(3),.ledger td:nth-child(4){font-size:22px;font-variant-numeric:tabular-nums;white-space:nowrap}.ledger td p{margin:0 0 10px;overflow-wrap:anywhere}.positive{color:var(--positive)}.negative{color:var(--negative)}.sourceLinks{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;color:var(--accent);font-size:12px}
 .page h1,.formPage h1{font-size:clamp(30px,3.5vw,46px);line-height:1.2;margin:8px 0 12px;letter-spacing:-.035em}
 .page h2{font-size:23px;margin:0 0 12px}.page h3{font-size:18px;margin:0 0 6px}.page p{margin:8px 0 16px}
 .tabs{display:flex;gap:32px;border-bottom:1px solid var(--divider);overflow-x:auto;margin-bottom:32px;white-space:nowrap}

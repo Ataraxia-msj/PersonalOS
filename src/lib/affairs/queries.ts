@@ -28,6 +28,10 @@ export async function getAffairsContributions(c:AffairsQueryClient,fromDate:stri
 export async function getAffairsCoinBalance(c:AffairsQueryClient):Promise<CoinBalanceRow|null>{
  const {data,error}=await c.from('vw_affairs_coin_balance').select('*').maybeSingle();return read('vw_affairs_coin_balance',data,error);
 }
+export async function getAffairsCoinEntry(c:AffairsQueryClient,id:string):Promise<CoinLedgerRow|null>{
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))throw new Error('invalid_event_id');
+ const {data,error}=await c.from('vw_affairs_coin_ledger').select('*').eq('id',id).maybeSingle();return read('vw_affairs_coin_ledger',data,error);
+}
 export async function getAffairsCoinLedger(c:AffairsQueryClient,beforeSequence?:string,pageSize=30):Promise<CoinLedgerRow[]>{
  if(!Number.isSafeInteger(pageSize)||pageSize<1||pageSize>100)throw new Error('invalid_page_size');
  let q=c.from('vw_affairs_coin_ledger').select('*').order('wallet_sequence',{ascending:false}).limit(pageSize);

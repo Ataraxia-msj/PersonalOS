@@ -18,9 +18,9 @@ export function createAffairsServices(clientFactory:()=>Promise<q.AffairsQueryCl
  },
  async getAffairsTaskListData():Promise<Ui.AffairsTaskListData>{const c=await clientFactory();const [tasks,projects,balance]=await Promise.all([q.getAffairsTasks(c),q.getAffairsProjects(c),q.getAffairsCoinBalance(c)]);return {tasks:tasks.map(a.adaptTask),projects:projects.map(a.adaptProject),balance:a.adaptBalance(balance)};},
  async getAffairsShopData():Promise<Ui.AffairsShopData>{const c=await clientFactory();const [rewards,redemptions,balance]=await Promise.all([q.getAffairsRewards(c),q.getAffairsRedemptions(c),q.getAffairsCoinBalance(c)]);return {rewards:rewards.map(a.adaptReward),redemptions:redemptions.map(a.adaptRedemption),balance:a.adaptBalance(balance)};},
- async getAffairsCoinsData(beforeSequence?:string):Promise<Ui.AffairsCoinsData>{
-  const c=await clientFactory();const [ledger,penalties,tasks,balance]=await Promise.all([q.getAffairsCoinLedger(c,beforeSequence),q.getAffairsPenalties(c),q.getAffairsTasks(c),q.getAffairsCoinBalance(c)]);
-  const entries=ledger.map(a.adaptCoinEntry);return {ledger:entries,penalties:penalties.map(a.adaptPenalty),tasks:tasks.map(a.adaptTask),balance:a.adaptBalance(balance),nextBeforeSequence:entries.length===30?entries.at(-1)!.walletSequence:null};
+ async getAffairsCoinsData(beforeSequence?:string,entryId?:string):Promise<Ui.AffairsCoinsData>{
+  const c=await clientFactory();const [ledger,penalties,tasks,balance,linked]=await Promise.all([q.getAffairsCoinLedger(c,beforeSequence),q.getAffairsPenalties(c),q.getAffairsTasks(c),q.getAffairsCoinBalance(c),entryId?q.getAffairsCoinEntry(c,entryId):Promise.resolve(null)]);
+  const entries=ledger.map(a.adaptCoinEntry);return {ledger:entries,penalties:penalties.map(a.adaptPenalty),tasks:tasks.map(a.adaptTask),balance:a.adaptBalance(balance),nextBeforeSequence:entries.length===30?entries.at(-1)!.walletSequence:null,serverNowISO:new Date().toISOString(),linkedEntry:linked?a.adaptCoinEntry(linked):null};
  },
  async getAffairsFormData(resource:'mainline'|'project'|'task'|'reward',id?:string):Promise<Ui.AffairsFormData|null>{
   const c=await clientFactory();const [ml,pr,ta,rw]=await Promise.all([q.getAffairsMainlines(c),q.getAffairsProjects(c),q.getAffairsTasks(c),resource==='reward'?q.getAffairsRewards(c):Promise.resolve([])]);

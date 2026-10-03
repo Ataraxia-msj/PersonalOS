@@ -1,0 +1,3 @@
+import {render,screen} from '@testing-library/react';import {it,expect,vi} from 'vitest';
+vi.mock('@/lib/affairs/service',()=>({getAffairsCoinsData:vi.fn(async()=>({balance:0,ledger:[],penalties:[],tasks:[],nextBeforeSequence:null,serverNowISO:'2026-10-03T00:00Z'}))}));vi.mock('../actions',()=>({submitAffairsAction:vi.fn()}));vi.mock('next/navigation',()=>({useRouter:()=>({refresh:vi.fn()})}));import Page from './page';
+it('empty ledger is real zero, with manual action only',async()=>{render(await Page({searchParams:Promise.resolve({})}));expect(screen.getByRole('heading',{name:'金币记录'})).toBeVisible();expect(screen.getByText('暂无金币流水。')).toBeVisible();});

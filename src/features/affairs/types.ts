@@ -15,7 +15,7 @@ export interface AffairsDashboardData {mainlines:AffairsMainline[];projects:Affa
 export interface AffairsProjectDetailData {project:AffairsProject;milestones:AffairsMilestone[];tasks:AffairsTask[];progress:AffairsProgress[];balance:number;serverNowISO:string}
 export interface AffairsTaskListData {tasks:AffairsTask[];projects:AffairsProject[];balance:number}
 export interface AffairsShopData {rewards:AffairsReward[];redemptions:AffairsRedemption[];balance:number}
-export interface AffairsCoinsData {ledger:AffairsCoinEntry[];penalties:AffairsPenalty[];tasks:AffairsTask[];balance:number;nextBeforeSequence:string|null}
+export interface AffairsCoinsData {ledger:AffairsCoinEntry[];penalties:AffairsPenalty[];tasks:AffairsTask[];balance:number;nextBeforeSequence:string|null;serverNowISO:string;linkedEntry?:AffairsCoinEntry|null}
 interface FormOptions {mainlines:AffairsMainline[];projects:AffairsProject[];tasks:AffairsTask[];serverNowISO:string}
 export type AffairsFormData=FormOptions & ({resource:'mainline';initialValues:AffairsMainline|null}|{resource:'project';initialValues:AffairsProject|null}|{resource:'task';initialValues:AffairsTask|null}|{resource:'reward';initialValues:AffairsReward|null});
 
