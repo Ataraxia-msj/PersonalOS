@@ -178,6 +178,9 @@ export interface MonthlyFinancialSummaryView {
   actual_investment: number;
   actual_debt: number;
   actual_unallocated: number;
+  actual_total_allocated: number;
+  overall_execution_rate: number | null;
+  monthly_balance: number;
   expense_variance: number;
   saving_rate: number | null;
   net_worth_start: number | null;
@@ -185,6 +188,73 @@ export interface MonthlyFinancialSummaryView {
   net_worth_change: number | null;
   missing_start_snapshots: number;
   missing_current_snapshots: number;
+}
+
+export interface MonthlyFinancialAnalysisView {
+  month: string;
+  budget_period_id: string;
+  status: BudgetPeriodStatus;
+  currency: string;
+  summary_as_of: string;
+  actual_income: number;
+  actual_total_expense: number;
+  monthly_balance: number;
+  actual_saving: number;
+  saving_rate: number | null;
+  planned_total_allocated: number;
+  actual_total_allocated: number;
+  overall_execution_rate: number | null;
+  net_worth_as_of: number | null;
+  net_worth_change: number | null;
+  previous_month_income: number | null;
+  previous_month_expense: number | null;
+  previous_month_balance: number | null;
+  previous_month_saving_rate: number | null;
+  previous_month_execution_rate: number | null;
+  prior_year_income: number | null;
+  prior_year_expense: number | null;
+  prior_year_balance: number | null;
+  income_mom_change: number | null;
+  income_mom_rate: number | null;
+  expense_mom_change: number | null;
+  expense_mom_rate: number | null;
+  balance_mom_change: number | null;
+  balance_mom_rate: number | null;
+  income_yoy_change: number | null;
+  income_yoy_rate: number | null;
+  expense_yoy_change: number | null;
+  expense_yoy_rate: number | null;
+  balance_yoy_change: number | null;
+  balance_yoy_rate: number | null;
+}
+
+export interface MonthlyCategorySpendingView {
+  month: string;
+  currency: string;
+  category_id: string;
+  category_name: string;
+  actual_amount: number;
+  transaction_count: number;
+  month_share: number | null;
+  month_rank: number;
+}
+
+export type FinancialInsightSeverity = "reminder" | "warning";
+
+export interface FinancialInsightView {
+  insight_key: string;
+  month: string;
+  currency: string;
+  insight_type: string;
+  severity: FinancialInsightSeverity;
+  title: string;
+  message: string;
+  metric_value: number | null;
+  threshold_value: number | null;
+  related_entry_id: string | null;
+  related_budget_period_id: string | null;
+  related_budget_bucket_id: string | null;
+  related_category_id: string | null;
 }
 
 export interface TransactionDetailView {
@@ -352,6 +422,9 @@ export interface Database {
       vw_account_balances: ViewDefinition<AccountBalanceView>;
       vw_budget_execution: ViewDefinition<BudgetExecutionView>;
       vw_monthly_financial_summary: ViewDefinition<MonthlyFinancialSummaryView>;
+      vw_monthly_financial_analysis: ViewDefinition<MonthlyFinancialAnalysisView>;
+      vw_monthly_category_spending: ViewDefinition<MonthlyCategorySpendingView>;
+      vw_financial_insights: ViewDefinition<FinancialInsightView>;
       vw_transaction_details: ViewDefinition<TransactionDetailView>;
     };
     Functions: {

@@ -9,6 +9,9 @@ import type {
   BudgetImpactRow,
   Database,
   ExpenseCategoryRow,
+  FinancialInsightView,
+  MonthlyCategorySpendingView,
+  MonthlyFinancialAnalysisView,
   MonthlyFinancialSummaryView,
   NetWorthView,
   TransactionDetailView,
@@ -156,6 +159,45 @@ export async function getMonthlyFinancialSummaries(
     .order("start_date", { ascending: false })
     .limit(7);
   return readResult("vw_monthly_financial_summary", data ?? [], error);
+}
+
+export async function getMonthlyFinancialAnalysis(
+  client: FinanceQueryClient,
+  throughMonth?: string,
+): Promise<MonthlyFinancialAnalysisView[]> {
+  let query = client
+    .from("vw_monthly_financial_analysis")
+    .select("*");
+  if (throughMonth) query = query.lte("month", throughMonth);
+  const { data, error } = await query
+    .order("month", { ascending: false })
+    .limit(12);
+  return readResult("vw_monthly_financial_analysis", data ?? [], error);
+}
+
+export async function getMonthlyCategorySpending(
+  client: FinanceQueryClient,
+  month: string,
+): Promise<MonthlyCategorySpendingView[]> {
+  const { data, error } = await client
+    .from("vw_monthly_category_spending")
+    .select("*")
+    .eq("month", month)
+    .order("month_rank", { ascending: true })
+    .order("category_id", { ascending: true });
+  return readResult("vw_monthly_category_spending", data ?? [], error);
+}
+
+export async function getFinancialInsights(
+  client: FinanceQueryClient,
+  month: string,
+): Promise<FinancialInsightView[]> {
+  const { data, error } = await client
+    .from("vw_financial_insights")
+    .select("*")
+    .eq("month", month)
+    .order("insight_key", { ascending: true });
+  return readResult("vw_financial_insights", data ?? [], error);
 }
 
 async function getConfirmedTransactionLines(

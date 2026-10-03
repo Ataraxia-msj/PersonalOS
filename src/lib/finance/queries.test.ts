@@ -11,6 +11,9 @@ import {
   getIncomeCategories,
   getIncomeTransactionForEdit,
   getExpenseTransactionForEdit,
+  getFinancialInsights,
+  getMonthlyCategorySpending,
+  getMonthlyFinancialAnalysis,
   getTransferTransactionForEdit,
   getMonthlyFinancialSummaries,
   getNetWorth,
@@ -154,6 +157,39 @@ describe("Finance View queries", () => {
     await getMonthlyFinancialSummaries(history.client);
     expect(history.calls).toContainEqual(["order", "start_date", { ascending: false }]);
     expect(history.calls).toContainEqual(["limit", 7]);
+  });
+
+  it("reads at most twelve analysis months ending at the selected natural month", async () => {
+    const query = createQueryDouble({ data: [], error: null });
+
+    await getMonthlyFinancialAnalysis(query.client, "2026-09-01");
+
+    expect(query.from).toHaveBeenCalledWith("vw_monthly_financial_analysis");
+    expect(query.calls).toContainEqual(["lte", "month", "2026-09-01"]);
+    expect(query.calls).toContainEqual(["order", "month", { ascending: false }]);
+    expect(query.calls).toContainEqual(["limit", 12]);
+  });
+
+  it.each([
+    ["category spending", getMonthlyCategorySpending, "vw_monthly_category_spending", ["order", "month_rank", { ascending: true }]],
+    ["financial insights", getFinancialInsights, "vw_financial_insights", ["order", "insight_key", { ascending: true }]],
+  ] as const)("reads %s for exactly one month", async (_label, read, view, expectedOrder) => {
+    const query = createQueryDouble({ data: [], error: null });
+
+    await read(query.client, "2026-09-01");
+
+    expect(query.from).toHaveBeenCalledWith(view);
+    expect(query.calls).toContainEqual(["eq", "month", "2026-09-01"]);
+    expect(query.calls).toContainEqual(expectedOrder);
+  });
+
+  it.each([
+    ["analysis", getMonthlyFinancialAnalysis, "vw_monthly_financial_analysis"],
+    ["categories", getMonthlyCategorySpending, "vw_monthly_category_spending"],
+    ["insights", getFinancialInsights, "vw_financial_insights"],
+  ] as const)("propagates contextual %s View errors", async (_label, read, view) => {
+    const query = createQueryDouble({ data: null, error: { message: "permission denied" } });
+    await expect(read(query.client, "2026-09-01")).rejects.toThrow(`${view}: permission denied`);
   });
 
   it("reads confirmed transaction lines in entry and line order without truncating entries", async () => {
