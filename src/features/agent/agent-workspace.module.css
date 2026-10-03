@@ -148,6 +148,18 @@
   transform: translateY(-1px);
 }
 
+.iconButton:disabled,
+.modelButton:disabled,
+.sendButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.sendButton:disabled:hover {
+  background: var(--accent);
+  transform: none;
+}
+
 .commands {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -272,6 +284,133 @@
   background: var(--surface);
 }
 
+.agentMessage > div > p {
+  margin: 0;
+}
+
+.interpretation {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.previewList {
+  display: grid;
+  gap: 12px;
+}
+
+.previewCard {
+  padding: 18px;
+  border: 1px solid var(--divider-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-deep);
+}
+
+.previewHeader,
+.previewHeader > div {
+  display: flex;
+  align-items: center;
+}
+
+.previewHeader {
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.previewHeader > div {
+  gap: 9px;
+}
+
+.previewType,
+.previewReady,
+.previewNeedsInput {
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.previewType {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.previewReady {
+  background: rgb(88 148 112 / 13%);
+  color: #8fba9c;
+}
+
+.previewNeedsInput {
+  background: rgb(198 151 76 / 14%);
+  color: #cdaa73;
+}
+
+.previewAmount {
+  color: var(--text-primary);
+  font-size: 21px;
+  font-weight: 520;
+}
+
+.previewDescription {
+  margin: 16px 0 0 !important;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.previewGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 24px;
+  margin: 18px 0 0;
+}
+
+.previewGrid > div {
+  min-width: 0;
+}
+
+.previewGrid dt {
+  margin-bottom: 5px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.previewGrid dd {
+  overflow: hidden;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.previewIssues {
+  display: grid;
+  gap: 5px;
+  margin: 16px 0 0;
+  padding: 12px 14px 12px 31px;
+  border-radius: 10px;
+  background: rgb(198 151 76 / 8%);
+  color: #cdaa73;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.unresolved {
+  padding: 12px 14px;
+  border-left: 2px solid #cdaa73;
+  background: rgb(198 151 76 / 7%);
+  color: var(--text-secondary) !important;
+  font-size: 13px;
+}
+
+.pendingReply {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
 .replyAction {
   display: inline-flex;
   align-items: center;
@@ -341,6 +480,10 @@
   .agentMessage {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+
+  .previewGrid {
+    grid-template-columns: 1fr;
   }
 
   .composerDock {

@@ -8,18 +8,25 @@ import {
   IconSearch,
   IconSend2,
 } from "@tabler/icons-react";
-import Link from "next/link";
-import { type FormEvent, type KeyboardEvent, useState } from "react";
+import { type FormEvent, type KeyboardEvent, useState, useTransition } from "react";
 
-import { agentCommands, getMockAgentReply } from "./data";
+import { interpretAgentMessageAction } from "@/app/agent-actions";
+import type { AgentActionResult, AgentInterpretation } from "@/lib/agent/types";
+
+import { agentCommands } from "./data";
 import styles from "./agent-workspace.module.css";
+import { TransactionPreview } from "./transaction-preview";
 
 interface ConversationMessage {
   id: string;
   role: "user" | "assistant";
   text: string;
-  actionHref?: string;
-  actionLabel?: string;
+  interpretation?: AgentInterpretation;
+  error?: boolean;
+}
+
+interface AgentWorkspaceProps {
+  action?: (rawText: string) => Promise<AgentActionResult>;
 }
 
 const commandIcons = {
@@ -28,31 +35,48 @@ const commandIcons = {
   receipt: IconReceipt,
 } as const;
 
-export function AgentWorkspace() {
+export function AgentWorkspace({ action = interpretAgentMessageAction }: AgentWorkspaceProps) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
+  const [isPending, startTransition] = useTransition();
   const hasConversation = messages.length > 0;
 
   const submitMessage = (rawMessage: string) => {
     const message = rawMessage.trim();
-    if (!message) return;
+    if (!message || isPending) return;
 
-    const reply = getMockAgentReply(message);
-    setMessages((current) => {
-      const index = current.length;
-      return [
-        ...current,
-        { id: `user-${index}`, role: "user", text: message },
-        {
-          id: `assistant-${index}`,
-          role: "assistant",
-          text: reply.text,
-          actionHref: reply.actionHref,
-          actionLabel: reply.actionLabel,
-        },
-      ];
-    });
+    const messageId = crypto.randomUUID();
+    setMessages((current) => [
+      ...current,
+      { id: `user-${messageId}`, role: "user", text: message },
+    ]);
     setInput("");
+
+    startTransition(async () => {
+      try {
+        const result = await action(message);
+        setMessages((current) => [
+          ...current,
+          {
+            id: `assistant-${messageId}`,
+            role: "assistant",
+            text: result.message,
+            interpretation: result.status === "success" ? result.interpretation : undefined,
+            error: result.status === "error",
+          },
+        ]);
+      } catch {
+        setMessages((current) => [
+          ...current,
+          {
+            id: `assistant-${messageId}`,
+            role: "assistant",
+            text: "Agent 服务暂时不可用，请稍后重试。",
+            error: true,
+          },
+        ]);
+      }
+    });
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -75,7 +99,7 @@ export function AgentWorkspace() {
             <span className={styles.statusDot} />
             <div>
               <p>当前对话</p>
-              <small>Agent 使用本地 mock 数据响应</small>
+              <small>Qwen 3.7 Flash · 写入前需要确认</small>
             </div>
           </div>
 
@@ -87,16 +111,30 @@ export function AgentWorkspace() {
               >
                 <span>{message.role === "user" ? "你" : "Agent"}</span>
                 <div>
-                  <p>{message.text}</p>
-                  {message.actionHref && message.actionLabel ? (
-                    <Link className={styles.replyAction} href={message.actionHref}>
-                      {message.actionLabel}
-                      <span aria-hidden="true">→</span>
-                    </Link>
+                  {message.error ? <p role="alert">{message.text}</p> : <p>{message.text}</p>}
+                  {message.interpretation ? (
+                    <div className={styles.interpretation}>
+                      <div className={styles.previewList}>
+                        {message.interpretation.transactions.map((draft, index) => (
+                          <TransactionPreview draft={draft} index={index} key={draft.draftId} />
+                        ))}
+                      </div>
+                      {message.interpretation.unresolvedSegments.length > 0 ? (
+                        <p className={styles.unresolved}>
+                          未能安全识别：{message.interpretation.unresolvedSegments.join("；")}
+                        </p>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
               </article>
             ))}
+            {isPending ? (
+              <article className={styles.agentMessage}>
+                <span>Agent</span>
+                <div className={styles.pendingReply}>正在识别交易…</div>
+              </article>
+            ) : null}
           </div>
         </section>
       ) : (
@@ -111,24 +149,30 @@ export function AgentWorkspace() {
 
       <div className={hasConversation ? styles.composerDock : styles.composerRegion}>
         <form className={styles.composer} onSubmit={handleSubmit}>
-          <button aria-label="添加附件" className={styles.iconButton} type="button">
+          <button aria-label="附件暂未开放" className={styles.iconButton} disabled type="button">
             <IconPaperclip aria-hidden="true" size={22} stroke={1.6} />
           </button>
           <textarea
             aria-label="给 Agent 发消息"
             data-agent-input
+            disabled={isPending}
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={handleInputKeyDown}
-            placeholder="问我任何问题，或让我执行操作…"
+            placeholder="描述一笔或多笔支出、收入或转账…"
             rows={1}
             value={input}
           />
-          <button aria-label="选择模型" className={styles.modelButton} type="button">
-            智能模型
+          <button aria-label="当前模型" className={styles.modelButton} disabled type="button">
+            Qwen 3.7 Flash
             <IconChevronDown aria-hidden="true" size={16} stroke={1.6} />
           </button>
           <span aria-hidden="true" className={styles.composerDivider} />
-          <button aria-label="发送消息" className={styles.sendButton} type="submit">
+          <button
+            aria-label={isPending ? "正在识别" : "发送消息"}
+            className={styles.sendButton}
+            disabled={isPending}
+            type="submit"
+          >
             <IconSend2 aria-hidden="true" size={23} stroke={1.7} />
           </button>
         </form>
@@ -155,7 +199,7 @@ export function AgentWorkspace() {
 
         {hasConversation ? null : (
           <p className={styles.commandHint}>
-            输入 <kbd>/</kbd> 查看全部命令
+            支持在一段话中记录多笔交易，确认后才会写入
           </p>
         )}
       </div>
