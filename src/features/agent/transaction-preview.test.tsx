@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import type { AgentTransactionDraft } from "@/lib/agent/types";
+import type { AgentConfirmationResult, AgentTransactionDraft } from "@/lib/agent/types";
 
 import { TransactionPreview } from "./transaction-preview";
 
@@ -48,5 +49,50 @@ describe("TransactionPreview", () => {
     expect(screen.getByText("需要选择转入账户")).toBeVisible();
     expect(screen.getByText("预算分类与转账用途不匹配")).toBeVisible();
     expect(screen.getByText("需要补充")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "确认并记录" })).not.toBeInTheDocument();
+  });
+
+  it("requires an explicit click, disables duplicate submission, and shows success", async () => {
+    const user = userEvent.setup();
+    let resolve!: (value: AgentConfirmationResult) => void;
+    const confirmAction = () => new Promise<AgentConfirmationResult>((done) => { resolve = done; });
+    render(<TransactionPreview confirmAction={confirmAction} draft={draft} index={0} />);
+
+    expect(screen.getByText("准备确认")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "确认并记录" }));
+    expect(screen.getByRole("button", { name: "正在提交" })).toBeDisabled();
+
+    await act(async () => resolve({ entryId: "entry-1", message: "支出已记录，财务数据已刷新。", status: "success" }));
+    expect(screen.getByText("支出已记录，财务数据已刷新。")).toBeVisible();
+    expect(screen.getByRole("button", { name: "已记录" })).toBeDisabled();
+  });
+
+  it("shows a committed warning and prevents a second write", async () => {
+    const user = userEvent.setup();
+    const confirmAction = async () => ({
+      entryId: "entry-1",
+      message: "支出已记录，但对应预算月份已关闭。",
+      status: "warning",
+    } as const);
+    render(<TransactionPreview confirmAction={confirmAction} draft={draft} index={0} />);
+    await user.click(screen.getByRole("button", { name: "确认并记录" }));
+    expect(await screen.findByText(/预算月份已关闭/)).toBeVisible();
+    expect(screen.getByRole("button", { name: "已记录" })).toBeDisabled();
+  });
+
+  it("keeps sibling cards independently confirmable after one deterministic failure", async () => {
+    const user = userEvent.setup();
+    const confirmAction = async (submitted: AgentTransactionDraft) => submitted.draftId === "draft-1"
+      ? { entryId: null, message: "所选账户已失效，请重新生成预览。", status: "error" as const }
+      : { entryId: "entry-2", message: "支出已记录。", status: "success" as const };
+    render(<>
+      <TransactionPreview confirmAction={confirmAction} draft={draft} index={0} />
+      <TransactionPreview confirmAction={confirmAction} draft={{ ...draft, draftId: "draft-2", description: "地铁" }} index={1} />
+    </>);
+
+    const cards = screen.getAllByRole("article", { name: /交易预览/ });
+    await user.click(within(cards[0]!).getByRole("button", { name: "确认并记录" }));
+    expect(await within(cards[0]!).findByText(/账户已失效/)).toBeVisible();
+    expect(within(cards[1]!).getByRole("button", { name: "确认并记录" })).toBeEnabled();
   });
 });

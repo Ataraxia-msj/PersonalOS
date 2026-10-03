@@ -398,6 +398,54 @@
   line-height: 1.5;
 }
 
+.confirmationMessage {
+  margin: 14px 0 0 !important;
+  padding: 11px 13px;
+  border-radius: 9px;
+  font-size: 13px;
+  line-height: 1.6 !important;
+}
+
+.confirmation_success {
+  background: rgb(88 148 112 / 10%);
+  color: #8fba9c !important;
+}
+
+.confirmation_warning {
+  background: rgb(198 151 76 / 10%);
+  color: #cdaa73 !important;
+}
+
+.confirmation_error,
+.confirmation_uncertain {
+  background: rgb(189 91 76 / 10%);
+  color: #d58c80 !important;
+}
+
+.confirmButton {
+  min-height: 40px;
+  margin-top: 16px;
+  padding: 0 16px;
+  border: 1px solid rgb(217 119 87 / 50%);
+  border-radius: 10px;
+  background: var(--accent);
+  color: #21130f;
+  cursor: pointer;
+  font-weight: 560;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.confirmButton:hover:not(:disabled) {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  transform: translateY(-1px);
+}
+
+.confirmButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .unresolved {
   padding: 12px 14px;
   border-left: 2px solid #cdaa73;

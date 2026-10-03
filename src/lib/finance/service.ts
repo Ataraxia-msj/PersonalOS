@@ -49,6 +49,7 @@ import {
   getTransactionAccountCurrencies,
   getTransferTransactionForEdit,
 } from "./queries";
+import type { FinanceQueryClient } from "./queries";
 import { shanghaiDate } from "./budget-validation";
 
 export async function getFinanceOverviewData(): Promise<FinanceOverviewData> {
@@ -188,8 +189,8 @@ export async function getIncomeTransactionFormData(): Promise<IncomeTransactionF
   return adaptIncomeTransactionFormData(accounts, categories);
 }
 
-export async function getAgentFinanceOptions(): Promise<AgentFinanceOptions> {
-  const client = await createClient();
+export async function getAgentFinanceOptions(existingClient?: FinanceQueryClient): Promise<AgentFinanceOptions> {
+  const client = existingClient ?? await createClient();
   const [accounts, expenseCategories, incomeCategories, budgetBuckets] = await Promise.all([
     getAccountBalances(client),
     getExpenseCategories(client),

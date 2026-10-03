@@ -71,3 +71,9 @@ export interface AgentInterpretation {
 export type AgentActionResult =
   | { status: "success"; message: string; interpretation: AgentInterpretation }
   | { status: "error"; message: string; interpretation: null };
+
+export type AgentConfirmationResult = {
+  status: "success" | "warning" | "error" | "uncertain";
+  message: string;
+  entryId: string | null;
+};
