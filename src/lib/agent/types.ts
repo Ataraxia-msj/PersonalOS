@@ -67,3 +67,7 @@ export interface AgentInterpretation {
   transactions: AgentTransactionDraft[];
   unresolvedSegments: string[];
 }
+
+export type AgentActionResult =
+  | { status: "success"; message: string; interpretation: AgentInterpretation }
+  | { status: "error"; message: string; interpretation: null };
