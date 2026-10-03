@@ -1,7 +1,97 @@
-'use client';
-import {useState} from 'react';import {IconGift} from '@tabler/icons-react';import type {AffairsRedemption} from '../types';import {formatAffairsTime} from '../format';import {ActionForm,type AffairsAction} from './action-form';import {ConfirmationPanel} from './confirmation-panel';import styles from './affairs.module.css';
-export function RedemptionList({redemptions,action}:{redemptions:AffairsRedemption[];action:AffairsAction}){
- const [selected,setSelected]=useState<{item:AffairsRedemption;mode:'use'|'cancel'}|null>(null);
- return <section className={styles.section}><h2>我的兑换</h2>{redemptions.length===0?<p className={styles.muted}>暂无兑换记录。</p>:redemptions.map(r=><article className={styles.redemptionRow} key={r.id} id={'redemption-'+r.id}><IconGift aria-hidden="true" size={28} stroke={1.4}/><div><h3>{r.nameSnapshot}</h3><p className={styles.muted}>{formatAffairsTime(r.createdAt)} · {r.priceSnapshot} 金币</p></div><span className={styles.badge}>{r.status==='available'?'待使用':r.status==='used'?'已使用':'已取消'}</span>{r.status==='available'?<div className={styles.rowActions}><button className={styles.secondaryButton} onClick={()=>setSelected({item:r,mode:'use'})}>标记已使用</button><button className={styles.textButton} onClick={()=>setSelected({item:r,mode:'cancel'})}>取消兑换</button></div>:null}</article>)}
- <ConfirmationPanel open={selected!==null} title={selected?.mode==='use'?'标记奖励已使用':'取消兑换并退币'} onClose={()=>setSelected(null)}>{selected?<><h3>{selected.item.nameSnapshot}</h3><p>{selected.mode==='use'?'确认已经实际享用了奖励；不会再次扣金币。':'仅未使用奖励可取消，退回原成交价 '+selected.item.priceSnapshot+' 金币，原交易保留。'}</p><ActionForm action={action} operation={selected.mode==='use'?'use_affairs_redemption':'cancel_affairs_redemption'} identity={selected.item} submitLabel={selected.mode==='use'?'确认已使用':'确认取消并退币'}/></>:null}</ConfirmationPanel></section>;
+"use client";
+import { useState } from "react";
+import { IconGift } from "@tabler/icons-react";
+import type { AffairsRedemption } from "../types";
+import { formatAffairsTime } from "../format";
+import { ActionForm, type AffairsAction } from "./action-form";
+import { ConfirmationPanel } from "./confirmation-panel";
+import styles from "./affairs.module.css";
+export function RedemptionList({
+  redemptions,
+  action,
+}: {
+  redemptions: AffairsRedemption[];
+  action: AffairsAction;
+}) {
+  const [selected, setSelected] = useState<{
+    item: AffairsRedemption;
+    mode: "use" | "cancel";
+  } | null>(null);
+  return (
+    <section className={styles.section}>
+      <h2>我的兑换</h2>
+      {redemptions.length === 0 ? (
+        <p className={styles.muted}>暂无兑换记录。</p>
+      ) : (
+        redemptions.map((r) => (
+          <article
+            className={styles.redemptionRow}
+            key={r.id}
+            id={"redemption-" + r.id}
+          >
+            <IconGift aria-hidden="true" size={28} stroke={1.4} />
+            <div>
+              <h3>{r.nameSnapshot}</h3>
+              <p className={styles.muted}>
+                {formatAffairsTime(r.createdAt)} · {r.priceSnapshot} 金币
+              </p>
+            </div>
+            <span className={styles.badge}>
+              {r.status === "available"
+                ? "待使用"
+                : r.status === "used"
+                  ? "已使用"
+                  : "已取消"}
+            </span>
+            {r.status === "available" ? (
+              <div className={styles.rowActions}>
+                <button
+                  className={styles.secondaryButton}
+                  onClick={() => setSelected({ item: r, mode: "use" })}
+                >
+                  标记已使用
+                </button>
+                <button
+                  className={styles.textButton}
+                  onClick={() => setSelected({ item: r, mode: "cancel" })}
+                >
+                  取消兑换
+                </button>
+              </div>
+            ) : null}
+          </article>
+        ))
+      )}
+      <ConfirmationPanel
+        open={selected !== null}
+        title={selected?.mode === "use" ? "标记奖励已使用" : "取消兑换并退币"}
+        onClose={() => setSelected(null)}
+      >
+        {selected ? (
+          <>
+            <h3>{selected.item.nameSnapshot}</h3>
+            <p>
+              {selected.mode === "use"
+                ? "确认已经实际享用了奖励；不会再次扣金币。"
+                : "仅未使用奖励可取消，退回原成交价 " +
+                  selected.item.priceSnapshot +
+                  " 金币，原交易保留。"}
+            </p>
+            <ActionForm
+              action={action}
+              operation={
+                selected.mode === "use"
+                  ? "use_affairs_redemption"
+                  : "cancel_affairs_redemption"
+              }
+              identity={selected.item}
+              submitLabel={
+                selected.mode === "use" ? "确认已使用" : "确认取消并退币"
+              }
+            />
+          </>
+        ) : null}
+      </ConfirmationPanel>
+    </section>
+  );
 }

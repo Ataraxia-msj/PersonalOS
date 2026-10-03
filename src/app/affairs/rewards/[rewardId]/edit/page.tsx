@@ -1,2 +1,14 @@
-import {notFound} from 'next/navigation';import {getAffairsFormData} from '@/lib/affairs/service';import {RewardForm} from '@/features/affairs/components/reward-form';import {submitAffairsAction} from '../../../actions';
-export default async function Page({params}:{params:Promise<{rewardId:string}>}){const {rewardId}=await params;const data=await getAffairsFormData('reward',rewardId);if(!data||data.resource!=='reward')notFound();return <RewardForm data={data} mode="edit" action={submitAffairsAction}/>;}
+import { notFound } from "next/navigation";
+import { getAffairsFormData } from "@/lib/affairs/service";
+import { RewardForm } from "@/features/affairs/components/reward-form";
+import { submitAffairsAction } from "../../../actions";
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ rewardId: string }>;
+}) {
+  const { rewardId } = await params;
+  const data = await getAffairsFormData("reward", rewardId);
+  if (!data || data.resource !== "reward") notFound();
+  return <RewardForm data={data} mode="edit" action={submitAffairsAction} />;
+}

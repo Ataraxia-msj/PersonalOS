@@ -1,7 +1,64 @@
-import type { AccountRow,BudgetBucketRow,BudgetPeriodRow,BudgetAllocationRow,BudgetImpactRow,ExpenseCategoryRow,JournalEntryRow,JournalLineRow,NetWorthView,AccountBalanceView,BudgetExecutionView,MonthlyFinancialSummaryView,MonthlyFinancialAnalysisView,MonthlyCategorySpendingView,FinancialInsightView,TransactionDetailView,CreateAccountArgs,CreateAccountRow,CreateCategoryArgs,CreateCategoryRow,CreateIncomeTransactionArgs,CreateIncomeTransactionRow,UpdateIncomeTransactionArgs,UpdateIncomeTransactionRow,SaveMonthlyBudgetArgs,SaveMonthlyBudgetRow,CreateExpenseTransactionArgs,CreateExpenseTransactionRow,UpdateExpenseTransactionArgs,UpdateExpenseTransactionRow,SetAccountActiveArgs,SetAccountActiveRow,SetCategoryActiveArgs,SetCategoryActiveRow,UpdateAccountArgs,UpdateAccountRow,UpdateCategoryArgs,UpdateCategoryRow } from '@/lib/finance/types';
-import type { BalanceSnapshotRow, ReconciliationPreviewRow, ReconciliationResult, ReconciliationSaveArgs } from '@/lib/finance/reconciliation-types';
-import type { TransferArgs, TransferResult, UpdateTransferArgs, UpdateTransferResult } from '@/lib/finance/transfer-types';
-import type { AffairsRowMap,AffairsRpcArgsMap,AffairsRpcReceiptRow,ProjectProgressRow,DailyContributionRow,CoinBalanceRow,CoinLedgerRow } from '@/lib/affairs/types';
+import type {
+  AccountRow,
+  BudgetBucketRow,
+  BudgetPeriodRow,
+  BudgetAllocationRow,
+  BudgetImpactRow,
+  ExpenseCategoryRow,
+  JournalEntryRow,
+  JournalLineRow,
+  NetWorthView,
+  AccountBalanceView,
+  BudgetExecutionView,
+  MonthlyFinancialSummaryView,
+  MonthlyFinancialAnalysisView,
+  MonthlyCategorySpendingView,
+  FinancialInsightView,
+  TransactionDetailView,
+  CreateAccountArgs,
+  CreateAccountRow,
+  CreateCategoryArgs,
+  CreateCategoryRow,
+  CreateIncomeTransactionArgs,
+  CreateIncomeTransactionRow,
+  UpdateIncomeTransactionArgs,
+  UpdateIncomeTransactionRow,
+  SaveMonthlyBudgetArgs,
+  SaveMonthlyBudgetRow,
+  CreateExpenseTransactionArgs,
+  CreateExpenseTransactionRow,
+  UpdateExpenseTransactionArgs,
+  UpdateExpenseTransactionRow,
+  SetAccountActiveArgs,
+  SetAccountActiveRow,
+  SetCategoryActiveArgs,
+  SetCategoryActiveRow,
+  UpdateAccountArgs,
+  UpdateAccountRow,
+  UpdateCategoryArgs,
+  UpdateCategoryRow,
+} from "@/lib/finance/types";
+import type {
+  BalanceSnapshotRow,
+  ReconciliationPreviewRow,
+  ReconciliationResult,
+  ReconciliationSaveArgs,
+} from "@/lib/finance/reconciliation-types";
+import type {
+  TransferArgs,
+  TransferResult,
+  UpdateTransferArgs,
+  UpdateTransferResult,
+} from "@/lib/finance/transfer-types";
+import type {
+  AffairsRowMap,
+  AffairsRpcArgsMap,
+  AffairsRpcReceiptRow,
+  ProjectProgressRow,
+  DailyContributionRow,
+  CoinBalanceRow,
+  CoinLedgerRow,
+} from "@/lib/affairs/types";
 type ViewDefinition<Row> = {
   Row: Row & Record<string, unknown>;
   Relationships: [];
@@ -42,7 +99,10 @@ export interface FinanceDatabase {
         Args: CreateAccountArgs;
         Returns: CreateAccountRow[];
       };
-      create_category: { Args: CreateCategoryArgs; Returns: CreateCategoryRow[] };
+      create_category: {
+        Args: CreateCategoryArgs;
+        Returns: CreateCategoryRow[];
+      };
       create_income_transaction: {
         Args: CreateIncomeTransactionArgs;
         Returns: CreateIncomeTransactionRow[];
@@ -51,11 +111,26 @@ export interface FinanceDatabase {
         Args: UpdateIncomeTransactionArgs;
         Returns: UpdateIncomeTransactionRow[];
       };
-      create_transfer_transaction: { Args: TransferArgs; Returns: TransferResult[] };
-      update_transfer_transaction: { Args: UpdateTransferArgs; Returns: UpdateTransferResult[] };
-      preview_balance_reconciliation: { Args: { p_account_id: string; p_snapshot_at: string }; Returns: ReconciliationPreviewRow[] };
-      reconcile_account_balance: { Args: ReconciliationSaveArgs; Returns: ReconciliationResult[] };
-      save_monthly_budget: { Args: SaveMonthlyBudgetArgs; Returns: SaveMonthlyBudgetRow[] };
+      create_transfer_transaction: {
+        Args: TransferArgs;
+        Returns: TransferResult[];
+      };
+      update_transfer_transaction: {
+        Args: UpdateTransferArgs;
+        Returns: UpdateTransferResult[];
+      };
+      preview_balance_reconciliation: {
+        Args: { p_account_id: string; p_snapshot_at: string };
+        Returns: ReconciliationPreviewRow[];
+      };
+      reconcile_account_balance: {
+        Args: ReconciliationSaveArgs;
+        Returns: ReconciliationResult[];
+      };
+      save_monthly_budget: {
+        Args: SaveMonthlyBudgetArgs;
+        Returns: SaveMonthlyBudgetRow[];
+      };
       create_expense_transaction: {
         Args: CreateExpenseTransactionArgs;
         Returns: CreateExpenseTransactionRow[];
@@ -68,31 +143,46 @@ export interface FinanceDatabase {
         Args: SetAccountActiveArgs;
         Returns: SetAccountActiveRow[];
       };
-      set_category_active: { Args: SetCategoryActiveArgs; Returns: SetCategoryActiveRow[] };
+      set_category_active: {
+        Args: SetCategoryActiveArgs;
+        Returns: SetCategoryActiveRow[];
+      };
       update_account: {
         Args: UpdateAccountArgs;
         Returns: UpdateAccountRow[];
       };
-      update_category: { Args: UpdateCategoryArgs; Returns: UpdateCategoryRow[] };
+      update_category: {
+        Args: UpdateCategoryArgs;
+        Returns: UpdateCategoryRow[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };
 }
 
-type AffairsTables = {[K in keyof AffairsRowMap as `affairs_${K}`]: TableDefinition<AffairsRowMap[K]>};
-type AffairsFunctions = {[K in keyof AffairsRpcArgsMap]:{Args:AffairsRpcArgsMap[K];Returns:AffairsRpcReceiptRow[]}};
+type AffairsTables = {
+  [K in keyof AffairsRowMap as `affairs_${K}`]: TableDefinition<
+    AffairsRowMap[K]
+  >;
+};
+type AffairsFunctions = {
+  [K in keyof AffairsRpcArgsMap]: {
+    Args: AffairsRpcArgsMap[K];
+    Returns: AffairsRpcReceiptRow[];
+  };
+};
 export interface Database {
- public: {
- Tables:FinanceDatabase['public']['Tables'] & AffairsTables;
- Views:FinanceDatabase['public']['Views'] & {
- vw_affairs_project_progress:ViewDefinition<ProjectProgressRow>;
- vw_affairs_daily_contributions:ViewDefinition<DailyContributionRow>;
- vw_affairs_coin_balance:ViewDefinition<CoinBalanceRow>;
- vw_affairs_coin_ledger:ViewDefinition<CoinLedgerRow>;
- };
- Functions:FinanceDatabase['public']['Functions'] & AffairsFunctions;
- Enums:Record<string,never>;CompositeTypes:Record<string,never>;
- };
+  public: {
+    Tables: FinanceDatabase["public"]["Tables"] & AffairsTables;
+    Views: FinanceDatabase["public"]["Views"] & {
+      vw_affairs_project_progress: ViewDefinition<ProjectProgressRow>;
+      vw_affairs_daily_contributions: ViewDefinition<DailyContributionRow>;
+      vw_affairs_coin_balance: ViewDefinition<CoinBalanceRow>;
+      vw_affairs_coin_ledger: ViewDefinition<CoinLedgerRow>;
+    };
+    Functions: FinanceDatabase["public"]["Functions"] & AffairsFunctions;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
 }
-

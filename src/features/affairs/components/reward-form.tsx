@@ -1,3 +1,58 @@
-'use client';
-import {useState} from 'react';import {ActionForm,type AffairsBaseFormProps} from './action-form';import styles from './affairs.module.css';
-export function RewardForm({data,mode,action}:AffairsBaseFormProps<'reward'>){const v=data.initialValues;const [active,setActive]=useState(v?.isActive??true);return <section className={styles.formPage}><h1>{mode==='create'?'添加奖励':'编辑奖励'}</h1><p className={styles.muted}>商品和价格由你自己设置。虚拟金币不会自动购买或记入财务。</p><ActionForm action={action} operation={mode==='create'?'create_affairs_reward':'update_affairs_reward'} identity={v??undefined} submitLabel="保存奖励"><label>奖励名称<input name="name" required defaultValue={v?.name??''}/></label><label>说明<textarea name="description" defaultValue={v?.description??''}/></label><label>金币价格<input name="price_coins" type="number" min="1" max="1000000" step="1" required defaultValue={v?.priceCoins??''}/></label><label className={styles.checkLabel}><input type="checkbox" checked={active} onChange={e=>setActive(e.target.checked)}/>上架奖励</label><input type="hidden" name="is_active" value={String(active)}/></ActionForm></section>;}
+"use client";
+import { useState } from "react";
+import { ActionForm, type AffairsBaseFormProps } from "./action-form";
+import styles from "./affairs.module.css";
+export function RewardForm({
+  data,
+  mode,
+  action,
+}: AffairsBaseFormProps<"reward">) {
+  const v = data.initialValues;
+  const [active, setActive] = useState(v?.isActive ?? true);
+  return (
+    <section className={styles.formPage}>
+      <h1>{mode === "create" ? "添加奖励" : "编辑奖励"}</h1>
+      <p className={styles.muted}>
+        商品和价格由你自己设置。虚拟金币不会自动购买或记入财务。
+      </p>
+      <ActionForm
+        action={action}
+        operation={
+          mode === "create" ? "create_affairs_reward" : "update_affairs_reward"
+        }
+        identity={v ?? undefined}
+        submitLabel="保存奖励"
+      >
+        <label>
+          奖励名称
+          <input name="name" required defaultValue={v?.name ?? ""} />
+        </label>
+        <label>
+          说明
+          <textarea name="description" defaultValue={v?.description ?? ""} />
+        </label>
+        <label>
+          金币价格
+          <input
+            name="price_coins"
+            type="number"
+            min="1"
+            max="1000000"
+            step="1"
+            required
+            defaultValue={v?.priceCoins ?? ""}
+          />
+        </label>
+        <label className={styles.checkLabel}>
+          <input
+            type="checkbox"
+            checked={active}
+            onChange={(e) => setActive(e.target.checked)}
+          />
+          上架奖励
+        </label>
+        <input type="hidden" name="is_active" value={String(active)} />
+      </ActionForm>
+    </section>
+  );
+}
