@@ -49,6 +49,9 @@ assert.deepEqual(await one("select name,category_type,parent_id,default_budget_b
 });
 assert.equal((await create(original)).replayed, true);
 await assert.rejects(create({ ...original, sort: 3 }), /request_payload_conflict/);
+await sql("update budget_buckets set is_active=false where id=$1", [expenseBucket]);
+assert.equal((await create(original)).replayed, true, "replay must not depend on the bucket's current state");
+await sql("update budget_buckets set is_active=true where id=$1", [expenseBucket]);
 await assert.rejects(create({ name: "餐饮" }), /category_name_conflict/);
 await assert.rejects(create({ name: "工资", type: "income", bucket: expenseBucket }), /income_category_budget_bucket_forbidden/);
 await assert.rejects(create({ bucket: savingBucket }), /invalid_default_budget_bucket/);
@@ -56,8 +59,13 @@ await assert.rejects(create({ name: "", bucket: null }), /invalid_category_name/
 await assert.rejects(create({ sort: -1, bucket: null }), /invalid_category_sort_order/);
 
 let category = await one("select * from categories where id=$1", [id]);
+const parentId = randomUUID();
+await sql("insert into categories(id,name,category_type) values($1,'生活','expense')", [parentId]);
+await sql("update categories set parent_id=$1 where id=$2", [parentId, id]);
+category = await one("select * from categories where id=$1", [id]);
 await update(category, { name: "餐饮食品", bucket: null, sort: 4 });
 category = await one("select * from categories where id=$1", [id]);
+assert.equal(category.parent_id, parentId, "metadata edits must preserve an existing parent relationship");
 assert.equal((await create(original)).replayed, true, "original create payload must replay after edits");
 await assert.rejects(update(category, { expected: "2000-01-01T00:00:00Z" }), /stale_category/);
 

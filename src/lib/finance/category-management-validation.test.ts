@@ -15,6 +15,10 @@ describe("category management validation", () => {
     data.set("defaultBudgetBucketId", "");
     expect(validateCreateCategory(data).input).toMatchObject({ categoryType: "income", defaultBudgetBucketId: null });
   });
+  it("rejects sort orders outside PostgreSQL integer range", () => {
+    const data = valid(); data.set("sortOrder", "2147483648");
+    expect(validateCreateCategory(data).errors.sortOrder).toBe("排序必须是 0–2147483647 的整数。");
+  });
   it("validates update and activation versions", () => {
     const data = valid(); data.set("categoryId", requestId); data.set("expectedUpdatedAt", "2026-10-03T00:00:00Z");
     expect(validateUpdateCategory(data).input).toMatchObject({ categoryId: requestId, expectedUpdatedAt: "2026-10-03T00:00:00Z" });

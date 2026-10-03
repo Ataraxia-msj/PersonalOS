@@ -15,7 +15,9 @@ function metadata(data: FormData) {
   if (defaultBudgetBucketId && !reconciliationUuid.test(defaultBudgetBucketId)) errors.defaultBudgetBucketId = "默认预算分类无效。";
   if (categoryType === "income" && defaultBudgetBucketId) errors.defaultBudgetBucketId = "收入分类不能设置消费预算分类。";
   const rawSort = value(data, "sortOrder"); const sortOrder = Number(rawSort);
-  if (!/^\d+$/.test(rawSort) || !Number.isSafeInteger(sortOrder)) errors.sortOrder = "排序必须是非负整数。";
+  if (!/^\d+$/.test(rawSort) || !Number.isSafeInteger(sortOrder) || sortOrder > 2147483647) {
+    errors.sortOrder = "排序必须是 0–2147483647 的整数。";
+  }
   const note = value(data, "note") || null; if (note && [...note].length > 1000) errors.note = "备注不能超过 1000 个字符。";
   return { errors, input: { name, categoryType, defaultBudgetBucketId, sortOrder, note } };
 }

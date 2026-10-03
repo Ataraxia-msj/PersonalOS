@@ -36,13 +36,6 @@ begin
   if p_category_type = 'income' and p_default_budget_bucket_id is not null then
     raise exception 'income_category_budget_bucket_forbidden' using errcode = '22023';
   end if;
-  if p_default_budget_bucket_id is not null and not exists (
-    select 1 from public.budget_buckets b
-    where b.id = p_default_budget_bucket_id and b.is_active and b.bucket_kind = 'expense'
-  ) then
-    raise exception 'invalid_default_budget_bucket' using errcode = '22023';
-  end if;
-
   v_payload := jsonb_build_object(
     'name', v_name, 'category_type', p_category_type,
     'default_budget_bucket_id', p_default_budget_bucket_id,
@@ -56,6 +49,13 @@ begin
     end if;
     return query select v_existing.id, v_existing.updated_at, true;
     return;
+  end if;
+
+  if p_default_budget_bucket_id is not null and not exists (
+    select 1 from public.budget_buckets b
+    where b.id = p_default_budget_bucket_id and b.is_active and b.bucket_kind = 'expense'
+  ) then
+    raise exception 'invalid_default_budget_bucket' using errcode = '22023';
   end if;
 
   begin
@@ -120,7 +120,7 @@ begin
 
   begin
     update public.categories set
-      name = v_name, category_type = p_category_type, parent_id = null,
+      name = v_name, category_type = p_category_type,
       default_budget_bucket_id = p_default_budget_bucket_id,
       sort_order = p_sort_order, note = v_note
     where id = p_category_id returning updated_at into v_updated_at;
