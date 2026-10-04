@@ -1,6 +1,7 @@
 "use client";
 import { ActionForm, type AffairsBaseFormProps } from "./action-form";
 import styles from "./affairs.module.css";
+import {ProjectFields} from "./entity-fields";
 export function ProjectForm({
   data,
   mode,
@@ -23,33 +24,7 @@ export function ProjectForm({
         submitLabel="保存项目"
         disabled={blocked}
       >
-        <label>
-          项目名称
-          <input name="name" required defaultValue={v?.name ?? ""} />
-        </label>
-        <label>
-          想获得的成果
-          <textarea name="outcome" required defaultValue={v?.outcome ?? ""} />
-        </label>
-        <label>
-          所属主线
-          <select name="mainline_id" defaultValue={v?.mainlineId ?? ""}>
-            <option value="">不关联主线</option>
-            {data.mainlines.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          截止日期（可选）
-          <input type="date" name="due_date" defaultValue={v?.dueDate ?? ""} />
-        </label>
-        <label>
-          说明
-          <textarea name="description" defaultValue={v?.description ?? ""} />
-        </label>
+        <ProjectFields initialValues={v} mainlines={data.mainlines}/>
       </ActionForm>
     </section>
   );

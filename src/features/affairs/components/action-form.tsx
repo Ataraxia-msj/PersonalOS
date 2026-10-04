@@ -34,6 +34,8 @@ export function ActionForm({
   submitLabel = "确认保存",
   disabled = false,
   onState,
+  resetOnSuccess = false,
+  receiptDisplay = "full",
 }: {
   operation: AffairsOperation;
   identity?: { id: string; revision: string };
@@ -42,24 +44,39 @@ export function ActionForm({
   submitLabel?: string;
   disabled?: boolean;
   onState?: (state: AffairsActionState) => void;
+  resetOnSuccess?: boolean;
+  receiptDisplay?: "full" | "changes" | "none";
 }) {
   const router = useRouter();
   const [state, setState] = useState(initialAffairsActionState);
   const [busy, setBusy] = useState(false);
   const [formEpoch, setFormEpoch] = useState(0);
+  const [dirty, setDirty] = useState(false);
   const saved = useRef<FormData | null>(null);
+  useEffect(() => {
+    if (!dirty && !busy && state.status !== 'uncertain') return;
+    const guard = (event: MouseEvent) => {
+      const anchor=(event.target as Element)?.closest('a[href]');
+      if (!anchor || anchor.getAttribute('href')?.startsWith('#')) return;
+      if (busy || state.status === 'uncertain' || !window.confirm('放弃尚未保存的内容？')) {
+        event.preventDefault(); event.stopPropagation();
+      }
+    };
+    document.addEventListener('click',guard,true);
+    return ()=>document.removeEventListener('click',guard,true);
+  },[dirty,busy,state.status]);
   const identityId = identity?.id;
   const identityRevision = identity?.revision;
   const locked =
-    busy || state.status === "uncertain" || state.status === "success";
+    busy || state.status === "uncertain" || (state.status === "success" && !resetOnSuccess);
   useEffect(() => {
-    if (state.status !== "uncertain") return;
+    if (!dirty && !busy && state.status !== "uncertain") return;
     const warn = (e: BeforeUnloadEvent) => {
       e.preventDefault();
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [state.status]);
+  }, [state.status, dirty, busy]);
   useEffect(() => {
     const submitted = saved.current;
     // Only confirmed commands may start a new form lifecycle. Refreshing
@@ -71,6 +88,7 @@ export function ActionForm({
     )
       return;
     saved.current = null;
+    setDirty(false);
     setState(initialAffairsActionState);
     setFormEpoch((n) => n + 1);
   }, [identityId, identityRevision, state.status]);
@@ -93,12 +111,19 @@ export function ActionForm({
       result = { ...result, status: "uncertain", receipt: null };
     setState(result);
     setBusy(false);
+    if (result.status === "success" && result.receipt) {
+      setDirty(false);
+      if (resetOnSuccess) {
+        saved.current = null;
+        setFormEpoch((n) => n + 1);
+      }
+    }
     onState?.(result);
     if (result.status === "success") router.refresh();
   }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy || state.status === "success") return;
+    if (busy || (state.status === "success" && !resetOnSuccess)) return;
     if (state.status === "uncertain" && saved.current) {
       void send(saved.current);
       return;
@@ -114,6 +139,8 @@ export function ActionForm({
       className={styles.form}
       data-affairs-unresolved={state.status === "uncertain"}
       data-affairs-pending={busy}
+      data-affairs-dirty={dirty}
+      onChange={() => setDirty(true)}
     >
       <input type="hidden" name="operation" value={operation} />
       {identity ? (
@@ -138,7 +165,7 @@ export function ActionForm({
         {Object.entries(state.fieldErrors).map(([k, v]) => (
           <p key={k}>{v}</p>
         ))}
-        {state.receipt ? (
+        {state.receipt && (receiptDisplay === "full" || (receiptDisplay === "changes" && state.receipt.coinDelta !== 0)) ? (
           <p>
             当次结算：{state.receipt.coinDelta > 0 ? "+" : ""}
             {state.receipt.coinDelta} 金币 · 原回执余额{" "}
@@ -165,11 +192,11 @@ export function ActionForm({
         <button
           className={styles.primaryButton}
           type="submit"
-          disabled={busy || disabled || state.status === "success"}
+          disabled={busy || disabled || (state.status === "success" && !resetOnSuccess)}
         >
           {busy
             ? "正在保存…"
-            : state.status === "success"
+            : state.status === "success" && !resetOnSuccess
               ? "已保存"
               : submitLabel}
         </button>
