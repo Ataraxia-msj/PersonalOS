@@ -27,14 +27,15 @@ export function AffairsPreview({interpretation,onProtectionChange,externalBlocke
  useEffect(()=>{
   if(queue||signature===duplicateState.signature&&duplicateState.status==='ready')return;
   const sequence=++generation.current;
+  let cancelled=false;
   const titles=[...new Set(items.filter(i=>i.type==='task'&&i.mode==='create'&&i.name?.trim()&&[...i.name.trim()].length<=200).map(i=>i.name!.trim()))];
   const timer=setTimeout(()=>{
    duplicateAction(titles).then(result=>{
-    if(sequence!==generation.current)return;
+    if(cancelled||sequence!==generation.current)return;
     setDuplicateState({signature,status:result.status==='success'?'ready':'error',items:result.status==='success'?result.items:[]});
-   }).catch(()=>{if(sequence===generation.current)setDuplicateState({signature,status:'error',items:[]});});
+   }).catch(()=>{if(!cancelled&&sequence===generation.current)setDuplicateState({signature,status:'error',items:[]});});
   },250);
-  return ()=>{clearTimeout(timer);generation.current++;};
+  return ()=>{clearTimeout(timer);cancelled=true;};
   // The signature includes every field relevant to exact-title duplicate checks.
   // eslint-disable-next-line react-hooks/exhaustive-deps
  },[signature,queue,lookupEpoch,duplicateAction]);

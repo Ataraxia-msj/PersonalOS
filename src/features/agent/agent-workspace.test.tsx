@@ -1,6 +1,7 @@
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it,vi } from "vitest";
+import {draft as affairsDraft,options as affairsOptions} from '@/lib/agent/affairs/test-fixtures';
 
 import type { AgentActionResult, AgentTransactionDraft,AgentInterpretation } from "@/lib/agent/types";
 
@@ -55,7 +56,7 @@ describe("AgentWorkspace", () => {
     await user.click(screen.getByRole("button", { name: "发送消息" }));
 
     expect(screen.getByText("微信早餐12，地铁3块")).toBeVisible();
-    expect(screen.getByText("正在识别交易…")).toBeVisible();
+    expect(screen.getByText("正在整理内容…")).toBeVisible();
     expect(screen.getByRole("button", { name: "正在识别" })).toBeDisabled();
 
     await act(async () => resolve(result()));
@@ -103,5 +104,13 @@ describe("AgentWorkspace", () => {
 
     expect(screen.getByRole("heading", { name: "今天想处理什么？" })).toBeVisible();
     expect(screen.queryByRole("log")).not.toBeInTheDocument();
+  });
+  it('renders affairs cards and locks new messages when confirmation is uncertain',async()=>{
+    const user=userEvent.setup(),confirm=vi.fn().mockResolvedValue({status:'uncertain',message:'未知结果',receipt:null,objectId:null,reused:false});
+    render(<AgentWorkspace action={async()=>({status:'success',message:'事务预览',interpretation:{domain:'affairs',message:'事务预览',items:[affairsDraft()],options:affairsOptions,duplicates:[],unresolvedSegments:[]}})} affairsConfirmAction={confirm} affairsDuplicateAction={async()=>({status:'success',items:[]})}/>);
+    await user.type(screen.getByRole('textbox',{name:'给 Agent 发消息'}),'面试');await user.click(screen.getByRole('button',{name:'发送消息'}));
+    expect(await screen.findByRole('article',{name:'事务预览 1'})).toBeVisible();
+    await user.click(screen.getByRole('button',{name:/确认保存/}));expect(await screen.findByRole('alert')).toHaveTextContent('未知结果');
+    expect(screen.getByRole('textbox',{name:'给 Agent 发消息'})).toBeDisabled();expect(screen.getByRole('button',{name:'发送消息'})).toBeDisabled();
   });
 });

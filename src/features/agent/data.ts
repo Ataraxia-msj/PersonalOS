@@ -22,10 +22,10 @@ export const agentCommands: AgentCommand[] = [
     icon: "trend",
   },
   {
-    id: "record-multiple",
+    id: "record-affairs",
     shortcut: "⌘ 3",
-    label: "批量记录交易",
-    prompt: "今天微信早餐12元，地铁3元，都算变动必要开销",
+    label: "整理待办与主线",
+    prompt: "明天上午10点面试。我的主线是准备国考、找工作和写大论文。",
     icon: "search",
   },
 ];

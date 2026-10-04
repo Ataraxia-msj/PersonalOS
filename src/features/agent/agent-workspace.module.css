@@ -469,6 +469,7 @@
 }
 
 .affairsCard { padding: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-elevated, #211f1c); min-width: 0; }
+.previewFieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .affairsCardHeader { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .affairsCardHeader span, .affairsSource { color: var(--text-secondary); font-size: 12px; overflow-wrap: anywhere; }
 .affairsSource { display: block; line-height: 1.7; margin: 12px 0; }

@@ -16,6 +16,9 @@ import type { AgentActionResult, PersonalOSInterpretation } from "@/lib/agent/ty
 import { agentCommands } from "./data";
 import styles from "./agent-workspace.module.css";
 import { TransactionPreview } from "./transaction-preview";
+import {AffairsPreview} from './affairs-preview';
+import type {AffairsConfirmAction} from './affairs-queue';
+import type {checkAgentAffairsDuplicatesAction} from '@/app/agent-affairs-actions';
 
 interface ConversationMessage {
   id: string;
@@ -27,6 +30,8 @@ interface ConversationMessage {
 
 interface AgentWorkspaceProps {
   action?: (rawText: string) => Promise<AgentActionResult>;
+  affairsConfirmAction?:AffairsConfirmAction;
+  affairsDuplicateAction?:typeof checkAgentAffairsDuplicatesAction;
 }
 
 const commandIcons = {
@@ -35,15 +40,18 @@ const commandIcons = {
   receipt: IconReceipt,
 } as const;
 
-export function AgentWorkspace({ action = interpretAgentMessageAction }: AgentWorkspaceProps) {
+export function AgentWorkspace({ action = interpretAgentMessageAction,affairsConfirmAction,affairsDuplicateAction }: AgentWorkspaceProps) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [isPending, startTransition] = useTransition();
+  const [protectedPreviews,setProtectedPreviews]=useState<string[]>([]);
+  const inputLocked=isPending||protectedPreviews.length>0;
+  function updateProtection(id:string,protectedPreview:boolean){setProtectedPreviews(current=>protectedPreview?(current.includes(id)?current:[...current,id]):current.includes(id)?current.filter(x=>x!==id):current);}
   const hasConversation = messages.length > 0;
 
   const submitMessage = (rawMessage: string) => {
     const message = rawMessage.trim();
-    if (!message || isPending) return;
+    if (!message || inputLocked) return;
 
     const messageId = crypto.randomUUID();
     setMessages((current) => [
@@ -114,11 +122,14 @@ export function AgentWorkspace({ action = interpretAgentMessageAction }: AgentWo
                   {message.error ? <p role="alert">{message.text}</p> : <p>{message.text}</p>}
                   {message.interpretation ? (
                     <div className={styles.interpretation}>
+                      {message.interpretation.domain==='affairs'?<AffairsPreview interpretation={message.interpretation} confirmAction={affairsConfirmAction} duplicateAction={affairsDuplicateAction} externalBlocked={protectedPreviews.some(id=>id!==message.id)} onProtectionChange={value=>updateProtection(message.id,value)}/>:null}
+                      <fieldset disabled={protectedPreviews.length>0} className={styles.previewFieldset}>
                       <div className={styles.previewList}>
                         {message.interpretation.domain==='finance'?message.interpretation.transactions.map((draft, index) => (
                           <TransactionPreview draft={draft} index={index} key={draft.draftId} />
                         )):null}
                       </div>
+                      </fieldset>
                       {message.interpretation.unresolvedSegments.length > 0 ? (
                         <p className={styles.unresolved}>
                           未能安全识别：{message.interpretation.unresolvedSegments.join("；")}
@@ -132,7 +143,7 @@ export function AgentWorkspace({ action = interpretAgentMessageAction }: AgentWo
             {isPending ? (
               <article className={styles.agentMessage}>
                 <span>Agent</span>
-                <div className={styles.pendingReply}>正在识别交易…</div>
+                <div className={styles.pendingReply}>正在整理内容…</div>
               </article>
             ) : null}
           </div>
@@ -155,10 +166,10 @@ export function AgentWorkspace({ action = interpretAgentMessageAction }: AgentWo
           <textarea
             aria-label="给 Agent 发消息"
             data-agent-input
-            disabled={isPending}
+            disabled={inputLocked}
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={handleInputKeyDown}
-            placeholder="描述一笔或多笔支出、收入或转账…"
+            placeholder="记录支出、收入、转账，或告诉我待办和主线…"
             rows={1}
             value={input}
           />
@@ -170,7 +181,7 @@ export function AgentWorkspace({ action = interpretAgentMessageAction }: AgentWo
           <button
             aria-label={isPending ? "正在识别" : "发送消息"}
             className={styles.sendButton}
-            disabled={isPending}
+            disabled={inputLocked}
             type="submit"
           >
             <IconSend2 aria-hidden="true" size={23} stroke={1.7} />
@@ -199,7 +210,7 @@ export function AgentWorkspace({ action = interpretAgentMessageAction }: AgentWo
 
         {hasConversation ? null : (
           <p className={styles.commandHint}>
-            支持在一段话中记录多笔交易，确认后才会写入
+            一段话可记录多笔交易或多件事务，预览确认后才保存
           </p>
         )}
       </div>

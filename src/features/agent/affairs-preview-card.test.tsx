@@ -18,3 +18,8 @@ it('changes actual project association and allows skipping an incomplete card',a
  await user.selectOptions(screen.getByLabelText('归属'),ids.project);expect(onChange).toHaveBeenLastCalledWith({parentId:ids.project,parentDraftId:null,duplicateConfirmed:false});
  await user.selectOptions(screen.getByLabelText('处理方式'),'skip');expect(onChange).toHaveBeenLastCalledWith({mode:'skip',matchConfirmed:false});
 });
+it('lets the user clear invalid model parent references on mainlines',async()=>{
+ const user=userEvent.setup(),onChange=vi.fn(),item=draft({type:'mainline',parentDraftId:ids.project});
+ render(<AffairsPreviewCard draft={item} index={0} options={options} items={[item]} onChange={onChange}/>);
+ await user.click(screen.getByRole('button',{name:'清除无效归属'}));expect(onChange).toHaveBeenLastCalledWith({parentId:null,parentDraftId:null,parentIndex:null});
+});
