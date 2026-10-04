@@ -17,5 +17,6 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 import Page from "./page";
 it("page delegates to service, never embeds query or fake examples", async () => {
   render(await Page());
-  expect(screen.getByRole("heading", { name: "事务" })).toBeVisible();
+  expect(screen.getByRole("region", { name: "事务数据总览" })).toBeVisible();
+  expect(screen.queryByRole('heading',{name:'事务'})).toBeNull();
 });

@@ -1,145 +1,30 @@
 "use client";
-import { useState } from "react";
+import {useRef,useState} from "react";
 import Link from "next/link";
-import type { AffairsTask, AffairsProject } from "../types";
-import type { AffairsAction } from "./action-form";
-import { ActionForm } from "./action-form";
+import type {AffairsTask,AffairsProject,AffairsTaskScope} from "../types";
+import {ActionRow} from "./action-row";
+import {canLeaveAffairsForm} from "./guarded-panel";
+import type {AffairsAction} from "./action-form";
 import styles from "./affairs.module.css";
-import { TaskCompletionPanel } from "./task-completion-panel";
-const labels = {
-  todo: "待开始",
-  in_progress: "推进中",
-  waiting: "等待",
-  done: "已完成",
-  cancelled: "已取消",
-};
-export function TaskList({
-  tasks,
-  projects,
-  balance,
-  action,
-  showAll = false,
-}: {
-  tasks: AffairsTask[];
-  projects: AffairsProject[];
-  balance: number;
-  action: AffairsAction;
-  showAll?: boolean;
+export function TaskList({tasks,projects,balance,action,showAll=false,variant='workbench',scope={kind:'all'}}:{
+ tasks:AffairsTask[];projects:AffairsProject[];balance:number;action:AffairsAction;
+ showAll?:boolean;variant?:'workbench'|'full';scope?:AffairsTaskScope;
 }) {
-  const [all, setAll] = useState(showAll);
-  const visible = all ? tasks : tasks.filter((t) => !t.projectId && !t.isCore);
-  return (
-    <section>
-      <header className={styles.sectionHeader}>
-        <div>
-          <h2>{showAll ? "行动" : "零散事务"}</h2>
-          <p className={styles.muted}>
-            核心行动完成 +1，杂事不发金币。当前 {balance} 金币。
-          </p>
-        </div>
-        <Link href="/affairs/tasks/new" className={styles.secondaryButton}>
-          新建行动
-        </Link>
-      </header>
-      {!showAll ? (
-        <div className={styles.filters}>
-          <button
-            className={!all ? styles.selectedFilter : styles.filter}
-            onClick={() => setAll(false)}
-          >
-            零散事务
-          </button>
-          <button
-            className={all ? styles.selectedFilter : styles.filter}
-            onClick={() => setAll(true)}
-          >
-            全部行动
-          </button>
-        </div>
-      ) : null}
-      {visible.length === 0 ? (
-        <p className={styles.empty}>暂无行动，可以先添加一件你想推进的事。</p>
-      ) : (
-        <div className={styles.taskRows}>
-          {visible.map((task) => {
-            const project = projects.find((p) => p.id === task.projectId);
-            const blocked =
-              project?.status === "archived" || project?.status === "completed";
-            return (
-              <article key={task.id} className={styles.taskRow}>
-                <div>
-                  <Link href={"/affairs/tasks/" + task.id + "/edit"}>
-                    <h3>{task.title}</h3>
-                  </Link>
-                  <p className={styles.muted}>
-                    {task.isCore ? "核心行动" : "普通事务"} ·{" "}
-                    {labels[task.status]}
-                    {project ? " · " + project.name : ""}
-                    {task.dueDate ? " · 截止 " + task.dueDate : ""}
-                  </p>
-                  {task.waitingReason ? <p>{task.waitingReason}</p> : null}
-                </div>
-                <div className={styles.rowActions}>
-                  <Link
-                    className={styles.textButton}
-                    href={"/affairs/tasks/" + task.id + "/edit"}
-                  >
-                    编辑
-                  </Link>
-                  <Link
-                    className={styles.textButton}
-                    href={"/affairs/tasks/" + task.id + "/edit#task-history"}
-                  >
-                    查看历史
-                  </Link>
-                  {!blocked ? (
-                    <>
-                      <TaskCompletionPanel
-                        task={task}
-                        currentBalance={balance}
-                        action={action}
-                      />
-                      {task.status !== "done" ? (
-                        <details>
-                          <summary className={styles.textButton}>
-                            更改状态
-                          </summary>
-                          <ActionForm
-                            action={action}
-                            operation="set_affairs_task_status"
-                            identity={task}
-                            submitLabel="保存状态"
-                          >
-                            <label>
-                              状态
-                              <select name="status" defaultValue={task.status}>
-                                <option value="todo">待开始</option>
-                                <option value="in_progress">推进中</option>
-                                <option value="waiting">等待</option>
-                                <option value="cancelled">已取消</option>
-                              </select>
-                            </label>
-                            <label>
-                              等待说明
-                              <input
-                                name="waiting_reason"
-                                defaultValue={task.waitingReason ?? ""}
-                              />
-                            </label>
-                          </ActionForm>
-                        </details>
-                      ) : null}
-                    </>
-                  ) : null}
-                  {blocked ? (
-                    <span className={styles.muted}>请先恢复项目</span>
-                  ) : null}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      )}
-    </section>
-  );
+ const [filter,setFilter]=useState('pending');
+ const root=useRef<HTMLElement>(null);
+ const full=showAll||variant==='full';
+ const byId=new Map(projects.map(p=>[p.id,p]));
+ const visible=tasks.filter(t=>{
+  const inScope=scope.kind==='all'||(scope.kind==='independent'?!t.projectId:scope.kind==='project'?t.projectId===scope.id:byId.get(t.projectId??'')?.mainlineId===scope.id);
+  const pending=['todo','in_progress','waiting'].includes(t.status);
+  return inScope&&(filter==='all'||(filter==='pending'?pending:filter==='core'?t.isCore&&pending:t.status===filter));
+ });
+ return <section className={styles.section} ref={root}>
+  <header className={styles.sectionHeader}><h2>行动清单</h2>{full?<Link href="/affairs">返回工作台</Link>:<Link href="/affairs/tasks">查看全部</Link>}</header>
+  <div className={styles.filters}>{[['pending','全部未完成'],['core','核心行动'],['waiting','等待'],...(full?[['done','已完成'],['cancelled','已取消'],['all','全部历史']]:[])].map(([key,label])=>
+    <button key={key} type="button" className={filter===key?styles.selectedFilter:styles.filter} aria-pressed={filter===key} onClick={()=>{if(canLeaveAffairsForm(root.current))setFilter(key);}}>{label}</button>
+  )}</div>
+  <div className={styles.taskRows}>{visible.map(task=><ActionRow key={task.id} task={task} project={byId.get(task.projectId??'')??null} balance={balance} action={action}/>)}</div>
+  {!visible.length?<p className={styles.muted}>暂无符合条件的行动。</p>:null}
+ </section>;
 }

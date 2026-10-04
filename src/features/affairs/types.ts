@@ -57,7 +57,13 @@ export interface AffairsDashboardData {
   today: string;
   serverNowISO: string;
 }
+export interface AffairsWorkbenchSummary {pendingTaskCount:number;activeProjectCount:number;completedLastSevenDays:number;balance:number;}
+export interface AffairsProjectNode {project:AffairsProject;tasks:AffairsTask[];}
+export interface AffairsOutline {mainlines:{mainline:AffairsMainline;projects:AffairsProjectNode[]}[];independentProjects:AffairsProjectNode[];}
+export type AffairsTaskScope={kind:'all'}|{kind:'mainline';id:string}|{kind:'project';id:string}|{kind:'independent'};
+export interface AffairsProjectsData {projects:AffairsProject[];mainlines:AffairsMainline[];}
 export interface AffairsProjectDetailData {
+  inboxSourceId?:string|null;
   project: AffairsProject;
   milestones: AffairsMilestone[];
   tasks: AffairsTask[];
@@ -98,6 +104,7 @@ export type AffairsFormData = FormOptions &
         resource: "task";
         initialValues: AffairsTask | null;
         taskHistory: AffairsTaskHistory[];
+        inboxSourceId?:string|null;
       }
     | { resource: "reward"; initialValues: AffairsReward | null }
   );

@@ -26,7 +26,9 @@ it("zero state has real creation entries and zero coins, no example content", ()
     "href",
     "/affairs/projects/new",
   );
-  expect(screen.getByText("0 金币")).toBeVisible();
+  expect(screen.getByText("金币余额")).toBeVisible();
+  expect(screen.queryByRole('heading',{name:'事务'})).toBeNull();
+  expect(screen.getByRole('link',{name:'查看全部'})).toHaveAttribute('href','/affairs/tasks');
   expect(
     screen.getByRole("button", { name: "2026-10-03 · 0 次推进" }),
   ).toBeVisible();

@@ -65,9 +65,9 @@ export function ContributionHeatmap({
           </div>
         </div>
       </div>
-      <p className={styles.muted}>
+      <details className={styles.muted}><summary>如何阅读</summary><p>
         颜色表示真实推进次数，不是金币数量；不要求连续打卡。
-      </p>
+      </p></details>
       {selected ? (
         <div className={styles.dayDetails}>
           <h3>{selected} 的推进</h3>

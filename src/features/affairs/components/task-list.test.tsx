@@ -16,7 +16,12 @@ it("keeps independent core tasks accessible through all actions", async () => {
     } as AffairsTask,
   ];
   render(<TaskList tasks={tasks} projects={[]} balance={0} action={vi.fn()} />);
-  expect(screen.queryByText("Core")).not.toBeInTheDocument();
-  await userEvent.click(screen.getByRole("button", { name: "全部行动" }));
   expect(screen.getByText("Core")).toBeVisible();
+  await userEvent.click(screen.getByRole("button", { name: "全部未完成" }));
+  expect(screen.getByText("Core")).toBeVisible();
+});
+it('cannot hide an unknown status command by switching filters',async()=>{
+ const task={id:'t',title:'Keep',status:'todo',projectId:null,isCore:false,revision:'1'} as AffairsTask;
+ render(<TaskList tasks={[task]} projects={[]} balance={0} action={async()=>({status:'uncertain',receipt:null,fieldErrors:{},message:'未知状态'})}/>);
+ await userEvent.click(screen.getByText('更改状态'));await userEvent.click(screen.getByRole('button',{name:'保存状态'}));await screen.findByText('未知状态');await userEvent.click(screen.getByRole('button',{name:'等待'}));expect(screen.getByText('Keep')).toBeVisible();expect(screen.getByRole('button',{name:'重试同一次提交'})).toBeVisible();
 });
