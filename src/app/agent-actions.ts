@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import { confirmAgentTransaction } from "@/lib/agent/confirm";
 import { interpretAgentMessage } from "@/lib/agent/orchestrator";
+import { classifyAgentMessage } from '@/lib/agent/intent';
+import { interpretAffairsMessage } from '@/lib/agent/affairs/orchestrator';
 import { QwenProviderError } from "@/lib/agent/qwen";
 import type {
   AgentActionResult,
@@ -39,12 +41,18 @@ export async function interpretAgentMessageAction(rawText: string): Promise<Agen
     return failure("暂时无法验证登录状态，请刷新页面后重试。");
   }
 
+  if(typeof rawText !== 'string')return failure('请输入文字。');
   const message = rawText.trim();
   if (!message) return failure("请输入需要 Agent 处理的内容。");
   if ([...message].length > 4000) return failure("单次输入不能超过 4000 个字符。");
 
   try {
-    const interpretation = await interpretAgentMessage(message);
+    const domain=await classifyAgentMessage(message);
+    if(domain==='mixed')return failure('请将财务交易和事务分别发送，这次没有保存任何内容。');
+    if(domain==='unsupported')return failure('目前支持记录财务交易，以及新建主线、项目、行动或收集内容；暂不支持此操作。');
+    const interpretation=domain==='affairs'
+      ? await interpretAffairsMessage(message,client)
+      : {domain:'finance' as const,...await interpretAgentMessage(message,new Date(),{loadOptions:()=>getAgentFinanceOptions(client)})};
     return {
       interpretation,
       message: interpretation.message,
@@ -52,7 +60,7 @@ export async function interpretAgentMessageAction(rawText: string): Promise<Agen
     };
   } catch (error) {
     if (error instanceof QwenProviderError) return failure(providerMessages[error.code]);
-    return failure("Agent 处理失败，请稍后重试。没有执行任何财务操作。");
+    return failure("Agent 处理失败，请稍后重试。没有保存任何内容。");
   }
 }
 

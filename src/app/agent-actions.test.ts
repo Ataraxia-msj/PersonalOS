@@ -3,6 +3,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { interpretAgentMessage } from "@/lib/agent/orchestrator";
+import {classifyAgentMessage} from '@/lib/agent/intent';
+import {interpretAffairsMessage} from '@/lib/agent/affairs/orchestrator';
 import { confirmAgentTransaction } from "@/lib/agent/confirm";
 import { QwenProviderError } from "@/lib/agent/qwen";
 import { getAgentFinanceOptions } from "@/lib/finance/service";
@@ -14,6 +16,8 @@ import { confirmAgentTransactionAction, interpretAgentMessageAction } from "./ag
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/agent/orchestrator", () => ({ interpretAgentMessage: vi.fn() }));
+vi.mock('@/lib/agent/intent',()=>({classifyAgentMessage:vi.fn()}));
+vi.mock('@/lib/agent/affairs/orchestrator',()=>({interpretAffairsMessage:vi.fn()}));
 vi.mock("@/lib/agent/confirm", () => ({ confirmAgentTransaction: vi.fn() }));
 vi.mock("@/lib/finance/service", () => ({ getAgentFinanceOptions: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -54,6 +58,7 @@ const draft: AgentTransactionDraft = {
 describe("interpretAgentMessageAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(classifyAgentMessage).mockResolvedValue('finance');
     vi.mocked(createClient).mockResolvedValue(client as never);
     getClaims.mockResolvedValue({ data: { claims: { sub: "user-1" } }, error: null });
     vi.mocked(interpretAgentMessage).mockResolvedValue(interpretation);
@@ -67,11 +72,11 @@ describe("interpretAgentMessageAction", () => {
 
   it("returns authenticated multi-draft interpretation", async () => {
     await expect(interpretAgentMessageAction("  微信早餐12，地铁3块  ")).resolves.toEqual({
-      interpretation,
+      interpretation:Object.assign({domain:'finance'},interpretation),
       message: "识别到两笔支出。",
       status: "success",
     });
-    expect(interpretAgentMessage).toHaveBeenCalledWith("微信早餐12，地铁3块");
+    expect(interpretAgentMessage).toHaveBeenCalledWith("微信早餐12，地铁3块",expect.any(Date),{loadOptions:expect.any(Function)});
   });
 
   it("rejects an expired session before invoking Qwen", async () => {
@@ -114,6 +119,22 @@ describe("interpretAgentMessageAction", () => {
     expect(result.status).toBe("error");
     expect(result.message).not.toContain("sk-private-key");
     expect(result.message).not.toContain("provider payload");
+  });
+  it.each(['mixed','unsupported'] as const)('rejects %s without interpreting or writing',async domain=>{
+    vi.mocked(classifyAgentMessage).mockResolvedValueOnce(domain);
+    expect((await interpretAgentMessageAction('内容')).status).toBe('error');
+    expect(interpretAgentMessage).not.toHaveBeenCalled();expect(interpretAffairsMessage).not.toHaveBeenCalled();
+  });
+  it('passes the already validated SSR client to affairs only',async()=>{
+    vi.mocked(classifyAgentMessage).mockResolvedValueOnce('affairs');
+    vi.mocked(interpretAffairsMessage).mockResolvedValueOnce({domain:'affairs',message:'请确认'} as never);
+    expect((await interpretAgentMessageAction('面试')).status).toBe('success');
+    expect(interpretAffairsMessage).toHaveBeenCalledWith('面试',client);
+    expect(getAgentFinanceOptions).not.toHaveBeenCalled();
+  });
+  it('does not fall back to finance when classification fails',async()=>{
+    vi.mocked(classifyAgentMessage).mockRejectedValueOnce(new QwenProviderError('response_invalid'));
+    expect((await interpretAgentMessageAction('面试')).status).toBe('error');expect(interpretAgentMessage).not.toHaveBeenCalled();
   });
 });
 

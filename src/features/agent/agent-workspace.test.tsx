@@ -2,7 +2,7 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import type { AgentActionResult, AgentTransactionDraft } from "@/lib/agent/types";
+import type { AgentActionResult, AgentTransactionDraft,AgentInterpretation } from "@/lib/agent/types";
 
 import { AgentWorkspace } from "./agent-workspace";
 
@@ -33,8 +33,9 @@ const expense = (overrides: Partial<AgentTransactionDraft> = {}): AgentTransacti
   ...overrides,
 });
 
-function result(overrides: Partial<NonNullable<AgentActionResult["interpretation"]>> = {}): AgentActionResult {
+function result(overrides: Partial<AgentInterpretation> = {}): AgentActionResult {
   const interpretation = {
+    domain:'finance' as const,
     message: "识别到两笔支出。",
     transactions: [expense(), expense({ amount: 3, description: "地铁", draftId: "draft-metro", sourceText: "地铁3块" })],
     unresolvedSegments: [],

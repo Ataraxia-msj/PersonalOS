@@ -11,7 +11,7 @@ import {
 import { type FormEvent, type KeyboardEvent, useState, useTransition } from "react";
 
 import { interpretAgentMessageAction } from "@/app/agent-actions";
-import type { AgentActionResult, AgentInterpretation } from "@/lib/agent/types";
+import type { AgentActionResult, PersonalOSInterpretation } from "@/lib/agent/types";
 
 import { agentCommands } from "./data";
 import styles from "./agent-workspace.module.css";
@@ -21,7 +21,7 @@ interface ConversationMessage {
   id: string;
   role: "user" | "assistant";
   text: string;
-  interpretation?: AgentInterpretation;
+  interpretation?: PersonalOSInterpretation;
   error?: boolean;
 }
 
@@ -115,9 +115,9 @@ export function AgentWorkspace({ action = interpretAgentMessageAction }: AgentWo
                   {message.interpretation ? (
                     <div className={styles.interpretation}>
                       <div className={styles.previewList}>
-                        {message.interpretation.transactions.map((draft, index) => (
+                        {message.interpretation.domain==='finance'?message.interpretation.transactions.map((draft, index) => (
                           <TransactionPreview draft={draft} index={index} key={draft.draftId} />
-                        ))}
+                        )):null}
                       </div>
                       {message.interpretation.unresolvedSegments.length > 0 ? (
                         <p className={styles.unresolved}>

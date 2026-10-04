@@ -68,8 +68,9 @@ export interface AgentInterpretation {
   unresolvedSegments: string[];
 }
 
+export type PersonalOSInterpretation = ({domain:'finance'} & AgentInterpretation) | import('./affairs/types').AffairsInterpretation;
 export type AgentActionResult =
-  | { status: "success"; message: string; interpretation: AgentInterpretation }
+  | { status: "success"; message: string; interpretation: PersonalOSInterpretation }
   | { status: "error"; message: string; interpretation: null };
 
 export type AgentConfirmationResult = {

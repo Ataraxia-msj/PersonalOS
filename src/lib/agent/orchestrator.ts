@@ -130,8 +130,9 @@ function deriveDraft(
 export async function interpretAgentMessage(
   rawText: string,
   now = new Date(),
-  dependencies: AgentDependencies = defaultDependencies,
+  overrides: Partial<AgentDependencies> = {},
 ): Promise<AgentInterpretation> {
+  const dependencies = {...defaultDependencies,...overrides};
   const options = await dependencies.loadOptions();
   const model = await dependencies.interpret({
     ...options,
