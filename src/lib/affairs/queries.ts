@@ -15,7 +15,14 @@ import type {
   CommandRow,
 } from "./types";
 import { decimalInteger, validDate } from "./validation";
+import type {AffairsTaskDuplicate} from '@/lib/agent/affairs/types';
 export type AffairsQueryClient = SupabaseClient<Database>;
+export async function getAgentTaskDuplicateRows(c:AffairsQueryClient,titles:string[]):Promise<AffairsTaskDuplicate[]> {
+  if(titles.length>20||titles.some(t=>!t.trim()||[...t].length>200))throw new Error('invalid_task_titles');
+  if(!titles.length)return [];
+  const rows=await allRows<{id:string;title:string;status:TaskRow['status'];project_id:string|null}>('affairs_tasks',c.from('affairs_tasks').select('id,title,status,project_id').in('title',[...new Set(titles)]).order('id'));
+  return rows.map(row=>({id:row.id,title:row.title,status:row.status,projectId:row.project_id}));
+}
 interface QueryError {
   message: string;
   code?: string;

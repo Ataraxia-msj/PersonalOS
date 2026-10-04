@@ -5,6 +5,12 @@ import * as a from "./adapters";
 import { shanghaiInput } from "./validation";
 import * as inbox from './inbox-queries';
 import type {InboxStatus} from './inbox-types';
+import type {AffairsAgentOptions} from '@/lib/agent/affairs/types';
+export async function getAgentAffairsOptions(c:q.AffairsQueryClient,now=new Date()):Promise<AffairsAgentOptions> {
+  const [mainlines,projects]=await Promise.all([q.getAffairsMainlines(c),q.getAffairsProjects(c)]);
+  return {mainlines:mainlines.map(m=>({id:m.id,name:m.name,status:m.status})),projects:projects.map(p=>({id:p.id,name:p.name,status:p.status,mainlineId:p.mainline_id})),serverNowISO:now.toISOString()};
+}
+export const getAgentTaskDuplicates=q.getAgentTaskDuplicateRows;
 export function createAffairsServices(
   clientFactory: () => Promise<q.AffairsQueryClient>,
 ) {
