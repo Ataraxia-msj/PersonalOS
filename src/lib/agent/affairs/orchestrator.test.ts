@@ -21,3 +21,15 @@ it('rejects invalid input and model reference indexes rather than silently dropp
  await expect(interpretAffairsMessage('面试',{} as AffairsQueryClient,new Date(),deps)).rejects.toThrow();
  await expect(interpretAffairsMessage('字'.repeat(4001),{} as AffairsQueryClient,new Date(),deps)).rejects.toThrow();
 });
+it.each([
+ ['明年1月8日面试','2026-10-04T04:00:00Z','2027-01-08'],
+ ['明天面试','2026-12-31T04:00:00Z','2027-01-01'],
+])('preserves relative cross-year request %s',async(sourceText,now,dueDate)=>{
+ const result=await interpretAffairsMessage(sourceText,{} as AffairsQueryClient,new Date(now),{loadOptions:async()=>options,interpret:async()=>({message:'确认',unresolvedSegments:[],items:[model({sourceText,dueDate})]}),duplicates:async()=>[],uuid:randomUUID});
+ expect(result.items[0].dueDate).toBe(dueDate);expect(result.items[0].dateConfirmed).toBe(false);
+});
+it('uses the same trimmed title for initial duplicate lookup and final payload',async()=>{
+ const lookup=vi.fn().mockResolvedValue([]);
+ await interpretAffairsMessage('面试',{} as AffairsQueryClient,new Date(),{loadOptions:async()=>options,interpret:async()=>({message:'确认',unresolvedSegments:[],items:[model({name:' 面试 '})]}),duplicates:lookup,uuid:randomUUID});
+ expect(lookup).toHaveBeenCalledWith(expect.anything(),['面试']);
+});

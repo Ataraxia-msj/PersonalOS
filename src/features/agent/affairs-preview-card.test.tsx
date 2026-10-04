@@ -23,3 +23,9 @@ it('lets the user clear invalid model parent references on mainlines',async()=>{
  render(<AffairsPreviewCard draft={item} index={0} options={options} items={[item]} onChange={onChange}/>);
  await user.click(screen.getByRole('button',{name:'清除无效归属'}));expect(onChange).toHaveBeenLastCalledWith({parentId:null,parentDraftId:null,parentIndex:null});
 });
+it.each(['mainline','capture'] as const)('normalizes hidden schedule when changing a task to %s',async type=>{
+ const user=userEvent.setup(),onChange=vi.fn(),item=draft({dueDate:'2026-10-08',plannedTime:'10:30',yearInferred:true});
+ render(<AffairsPreviewCard draft={item} index={0} options={options} items={[item]} onChange={onChange}/>);
+ await user.selectOptions(screen.getByLabelText('类型'),type);
+ expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({type,dueDate:null,plannedTime:null,yearInferred:false,dateConfirmed:false}));
+});

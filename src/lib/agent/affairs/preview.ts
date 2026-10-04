@@ -25,6 +25,7 @@ export function validateAffairsDrafts(input:AffairsDraft[], options:AffairsAgent
   if(length(item.description)>10000) issue(item,'说明不能超过 10000 字');
   if(item.type==='project'&&(length(item.outcome)<1||length(item.outcome)>2000)) issue(item,'请填写项目成果（1–2000 字）');
   if(item.dueDate&&!validDate(item.dueDate)) issue(item,'计划日期无效');
+  if((item.type==='mainline'||item.type==='capture')&&(item.dueDate||item.plannedTime))issue(item,'此类型不支持计划日期，请清除或更换类型');
   if(item.plannedTime&&(!item.dueDate||!/^([01]\d|2[0-3]):[0-5]\d$/.test(item.plannedTime))) issue(item,'计划时间需要有效日期和 HH:mm');
   if(item.dueDate&&item.yearInferred&&!item.dateConfirmed) issue(item,'请确认推断的年份');
   if(item.type==='task'&&item.isCore&&(length(item.coreReason)<1||length(item.coreReason)>2000||length(item.completionCriteria)<1||length(item.completionCriteria)>2000)) issue(item,'核心行动需要目标及完成条件（各 1–2000 字）');

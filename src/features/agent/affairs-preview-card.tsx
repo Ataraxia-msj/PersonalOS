@@ -16,10 +16,11 @@ export function AffairsPreviewCard({draft,index,options,items,locked=false,row,d
   <small className={styles.affairsSource}>原文：{draft.sourceText}</small>
   <fieldset disabled={locked} className={styles.affairsFields}>
    <div className={styles.affairsFieldsGrid}>
-    <label>类型<select value={draft.type} onChange={e=>onChange({type:e.target.value as AffairsDraft['type'],parentId:null,parentDraftId:null,mode:'create',reuseId:null,isCore:false})}>{Object.entries(affairsLabels).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label>
+    <label>类型<select value={draft.type} onChange={e=>onChange({type:e.target.value as AffairsDraft['type'],parentId:null,parentDraftId:null,mode:'create',reuseId:null,isCore:false,...(['mainline','capture'].includes(e.target.value)?{dueDate:null,plannedTime:null,yearInferred:false,dateConfirmed:false}:{})})}>{Object.entries(affairsLabels).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label>
     <label>处理方式<select value={draft.mode} onChange={e=>onChange({mode:e.target.value as AffairsDraft['mode'],matchConfirmed:false})}><option value="create">新建</option>{eligible.length>0?<option value="reuse">复用已有</option>:null}<option value="skip">跳过</option></select></label>
    </div>
    {!parentKind&&(draft.parentId||draft.parentDraftId)?<button type="button" onClick={()=>onChange({parentId:null,parentDraftId:null,parentIndex:null})}>清除无效归属</button>:null}
+   {!parentKind&&(draft.dueDate||draft.plannedTime)?<button type="button" onClick={()=>onChange({dueDate:null,plannedTime:null,yearInferred:false,dateConfirmed:false})}>清除不适用的计划日期</button>:null}
    {draft.mode==='reuse'?<>
     <label>复用目标<select value={draft.reuseId??''} onChange={e=>onChange({reuseId:e.target.value||null,matchConfirmed:false})}><option value="">选择已有{affairsLabels[draft.type]}</option>{eligible.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
     <label className={styles.affairsCheckbox}><input type="checkbox" checked={draft.matchConfirmed} onChange={e=>onChange({matchConfirmed:e.target.checked})}/>确认复用已有记录（不修改原记录）</label>

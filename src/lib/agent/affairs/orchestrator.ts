@@ -34,9 +34,10 @@ export async function interpretAffairsMessage(rawText:string,client:AffairsQuery
  const drafts=model.items.map((item,index):AffairsDraft=>{
   if(item.parentIndex!==null&&(!Number.isInteger(item.parentIndex)||item.parentIndex<0||item.parentIndex>=draftIds.length))throw new QwenProviderError('response_invalid');
   const inferred=!!item.dueDate&&!/\d{4}\s*(?:年|[-/])/.test(item.sourceText);
-  const dueDate=inferred?`${shanghaiInput(now).slice(0,4)}${item.dueDate!.slice(4)}`:item.dueDate;
+  const relative=/(?:明年|后年|今年|去年|前年|今天|明天|后天|昨天|今晚|明早|明晚|(?:下|本|这|上)+(?:周|星期|个月|月))/.test(item.sourceText);
+  const dueDate=inferred&&!relative?`${shanghaiInput(now).slice(0,4)}${item.dueDate!.slice(4)}`:item.dueDate;
   return {...item,dueDate,yearInferred:inferred||item.yearInferred,isCore:false,draftId:draftIds[index],requestId:dependencies.uuid(),rawText,parentDraftId:item.parentIndex===null?null:draftIds[item.parentIndex],mode:item.existingId?'reuse':'create',reuseId:item.existingId,matchConfirmed:false,dateConfirmed:false,duplicateConfirmed:false,issues:[]};
  });
- const duplicates=await dependencies.duplicates(client,[...new Set(drafts.filter(d=>d.type==='task'&&d.name&&[...d.name].length<=200).map(d=>d.name!))]);
+ const duplicates=await dependencies.duplicates(client,[...new Set(drafts.filter(d=>d.type==='task'&&d.name?.trim()&&[...d.name.trim()].length<=200).map(d=>d.name!.trim()))]);
  return {domain:'affairs',message:model.message,items:validateAffairsDrafts(drafts,options).items,options,unresolvedSegments:model.unresolvedSegments,duplicates};
 }

@@ -21,6 +21,9 @@ it('rejects extra fields, unsupported operations and malformed payload before RP
  }
  expect(rpc).not.toHaveBeenCalled();
 });
+it.each(['constructor','toString','__proto__'])('rejects prototype key %s as an unsupported operation',async kind=>{
+ const rpc=vi.fn();expect((await confirmAgentAffairs({rpc} as unknown as AffairsQueryClient,{kind,requestId:ids.project,payload:kind==='constructor'?{x:'x'}:{}} as never)).status).toBe('error');expect(rpc).not.toHaveBeenCalled();
+});
 it('maps explicit RLS rejection separately from lost response without exposing detail',async()=>{
  const rpc=vi.fn().mockResolvedValue({data:null,error:{code:'42501',message:'private details'}}),client={rpc} as unknown as AffairsQueryClient,command=toAffairsConfirmation(draft(),null);
  expect((await confirmAgentAffairs(client,command)).status).toBe('error');
@@ -32,4 +35,11 @@ it('verifies reuse against real owner-scoped candidates, never RPC',async()=>{
  await expect(confirmAgentAffairs(client,{kind:'reuse_mainline',requestId:ids.project,objectId:ids.mainline},async()=>options)).resolves.toMatchObject({status:'success',reused:true});
  await expect(confirmAgentAffairs(client,{kind:'reuse_mainline',requestId:ids.project,objectId:ids.project},async()=>options)).resolves.toMatchObject({status:'error'});
  expect(rpc).not.toHaveBeenCalled();
+});
+it('checks a new project mainline state, but existing requests replay even after it is archived',async()=>{
+ const rpc=vi.fn().mockResolvedValue({data:[{...receipt,replayed:true}],error:null}),client={rpc} as unknown as AffairsQueryClient;
+ const command=toAffairsConfirmation(draft({type:'project',outcome:'成果',parentId:ids.mainline}),null);
+ const check=vi.fn().mockResolvedValueOnce('invalid').mockResolvedValueOnce('replay');
+ expect((await confirmAgentAffairs(client,command,async()=>options,check)).status).toBe('error');expect(rpc).not.toHaveBeenCalled();
+ expect((await confirmAgentAffairs(client,command,async()=>options,check)).status).toBe('success');expect(rpc).toHaveBeenCalledTimes(1);
 });

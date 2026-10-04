@@ -52,3 +52,16 @@ it('guards internal navigation and beforeunload while dirty',async()=>{
  await user.click(screen.getByRole('link',{name:'财务导航'}));expect(ask).toHaveBeenCalled();
  const event=new Event('beforeunload',{cancelable:true});window.dispatchEvent(event);expect(event.defaultPrevented).toBe(true);ask.mockRestore();
 });
+it('keeps new parent receipt available when editing a failed child after partial success',async()=>{
+ const user=userEvent.setup(),parent=draft({type:'project',name:'新项目',outcome:'真实成果'}),child=draft({name:'子行动',parentDraftId:parent.draftId});
+ const confirm=vi.fn().mockResolvedValueOnce({status:'success',message:'父级已保存',receipt:null,objectId:ids.project.replace(/2$/,'3'),reused:false}).mockResolvedValueOnce({status:'error',message:'明确拒绝',receipt:null,objectId:null,reused:false}).mockResolvedValue({status:'success',message:'子项已保存',receipt:null,objectId:ids.project,reused:false});
+ render(<AffairsPreview interpretation={interpretation([parent,child])} confirmAction={confirm} duplicateAction={duplicateAction}/>);
+ await user.click(screen.getByRole('button',{name:/确认保存/}));await screen.findByRole('alert');
+ await user.click(screen.getByRole('button',{name:'结束原批次，修改未保存项'}));
+ const childCard=screen.getByRole('article',{name:'事务预览 2'});
+ expect(within(childCard).getByLabelText('归属')).toHaveValue(ids.project.replace(/2$/,'3'));
+ await waitFor(()=>expect(screen.getByRole('button',{name:'确认保存 1 项'})).toBeEnabled());
+ await user.click(screen.getByRole('button',{name:'确认保存 1 项'}));
+ expect(confirm.mock.calls[2][0]).toMatchObject({kind:'task',payload:{project_id:ids.project.replace(/2$/,'3')}});
+ expect(confirm).toHaveBeenCalledTimes(3);
+});

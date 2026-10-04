@@ -20,8 +20,15 @@ export type AffairsQueryClient = SupabaseClient<Database>;
 export async function getAgentTaskDuplicateRows(c:AffairsQueryClient,titles:string[]):Promise<AffairsTaskDuplicate[]> {
   if(titles.length>20||titles.some(t=>!t.trim()||[...t].length>200))throw new Error('invalid_task_titles');
   if(!titles.length)return [];
-  const rows=await allRows<{id:string;title:string;status:TaskRow['status'];project_id:string|null}>('affairs_tasks',c.from('affairs_tasks').select('id,title,status,project_id').in('title',[...new Set(titles)]).order('id'));
+  const rows=await allRows<{id:string;title:string;status:TaskRow['status'];project_id:string|null}>('affairs_tasks',c.from('affairs_tasks').select('id,title,status,project_id').in('title',[...new Set(titles.map(t=>t.trim()))]).order('id'));
   return rows.map(row=>({id:row.id,title:row.title,status:row.status,projectId:row.project_id}));
+}
+export async function getAgentProjectParentEligibility(c:AffairsQueryClient,requestId:string,mainlineId:string):Promise<'replay'|'eligible'|'invalid'>{
+  const previous=await c.from('affairs_commands').select('request_id').eq('request_id',requestId).maybeSingle();
+  if(read('affairs_commands',previous.data,previous.error))return 'replay';
+  const parent=await c.from('affairs_mainlines').select('id,status').eq('id',mainlineId).maybeSingle();
+  const row=read('affairs_mainlines',parent.data,parent.error);
+  return row&&(row.status==='active'||row.status==='paused')?'eligible':'invalid';
 }
 interface QueryError {
   message: string;

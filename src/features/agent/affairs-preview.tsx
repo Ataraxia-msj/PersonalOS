@@ -22,6 +22,13 @@ export function AffairsPreview({interpretation,onProtectionChange,externalBlocke
  const [lookupEpoch,setLookupEpoch]=useState(0);
  const generation=useRef(0),runLock=useRef(false),queueRef=useRef<AffairsQueue|null>(null);
  const protectionCallback=useRef(onProtectionChange);protectionCallback.current=onProtectionChange;
+ const effectiveOptions={...initial.options,mainlines:[...initial.options.mainlines],projects:[...initial.options.projects]};
+ // Only actual successful receipts extend candidates; never synthesize IDs for unsaved cards.
+ for(const row of [...savedRows,...rows]){
+  if(row.status!=='success'||!row.result?.objectId||!row.command)continue;
+  if(row.command.kind==='mainline'&&!effectiveOptions.mainlines.some(p=>p.id===row.result!.objectId))effectiveOptions.mainlines.push({id:row.result.objectId,name:row.command.payload.name,status:'active'});
+  if(row.command.kind==='project'&&!effectiveOptions.projects.some(p=>p.id===row.result!.objectId))effectiveOptions.projects.push({id:row.result.objectId,name:row.command.payload.name,status:'active',mainlineId:row.command.payload.mainline_id});
+ }
  const signature=signatureOf(items);
  const duplicatePending=!queue&&signature!==duplicateState.signature;
  useEffect(()=>{
@@ -39,7 +46,7 @@ export function AffairsPreview({interpretation,onProtectionChange,externalBlocke
   // The signature includes every field relevant to exact-title duplicate checks.
   // eslint-disable-next-line react-hooks/exhaustive-deps
  },[signature,queue,lookupEpoch,duplicateAction]);
- const checked=validateAffairsDrafts(items,initial.options);
+ const checked=validateAffairsDrafts(items,effectiveOptions);
  const duplicates=signature===duplicateState.signature?duplicateState.items:[];
  const validated=checked.items.map(item=>({...item,issues:[...item.issues,...(item.mode==='create'&&item.type==='task'&&duplicates.some(d=>d.title===item.name?.trim())&&!item.duplicateConfirmed?['请确认同名行动仍然新建，或跳过']:[])]}));
  const selected=validated.filter(i=>i.mode!=='skip');
@@ -73,7 +80,7 @@ export function AffairsPreview({interpretation,onProtectionChange,externalBlocke
   let active=queueRef.current;
   if(!active){
    if(!canSave)return;
-   try{active=new AffairsQueue(validated,initial.options);}catch{setError('预览尚不完整，或说明过长，请检查后再保存。');return;}
+   try{active=new AffairsQueue(validated,effectiveOptions);}catch{setError('预览尚不完整，或说明过长，请检查后再保存。');return;}
    queueRef.current=active;setQueue(active);
   }
   runLock.current=true;setBusy(true);protectionCallback.current?.(true);
@@ -92,8 +99,8 @@ export function AffairsPreview({interpretation,onProtectionChange,externalBlocke
  }
  const visibleRows:Array<{draft:AffairsDraft;row?:AffairsQueueRow}>=queue?(rows.length?rows:queue.rows).map(row=>({draft:row.draft,row})):validated.map(draft=>({draft}));
  return <section aria-label="事务预览" data-affairs-dirty={dirty?'true':'false'} data-affairs-pending={busy?'true':'false'} data-affairs-unresolved={unknown?'true':'false'}>
-  {savedRows.map((row,index)=><AffairsPreviewCard key={row.draft.draftId} draft={row.draft} index={index} options={initial.options} items={[]} locked row={row} onChange={()=>{}}/>)}
-  <div className={styles.previewList}>{visibleRows.map((entry,index)=><AffairsPreviewCard key={entry.draft.draftId} draft={entry.draft} index={savedRows.length+index} options={initial.options} items={items} locked={!!queue||externalBlocked} row={entry.row} duplicates={duplicates.filter(d=>d.title===entry.draft.name?.trim())} onChange={patch=>change(entry.draft.draftId,patch)}/>)}</div>
+  {savedRows.map((row,index)=><AffairsPreviewCard key={row.draft.draftId} draft={row.draft} index={index} options={effectiveOptions} items={[]} locked row={row} onChange={()=>{}}/>)}
+  <div className={styles.previewList}>{visibleRows.map((entry,index)=><AffairsPreviewCard key={entry.draft.draftId} draft={entry.draft} index={savedRows.length+index} options={effectiveOptions} items={items} locked={!!queue||externalBlocked} row={entry.row} duplicates={duplicates.filter(d=>d.title===entry.draft.name?.trim())} onChange={patch=>change(entry.draft.draftId,patch)}/>)}</div>
   {!queue?<div className={styles.affairsActions}><button type="button" onClick={addProject} disabled={items.length>=20||externalBlocked}>添加项目</button><button type="button" className={styles.confirmButton} disabled={!canSave||externalBlocked} onClick={()=>void save()}>确认保存 {selected.length} 项</button></div>:!complete?<div className={styles.affairsActions}><button type="button" className={styles.confirmButton} disabled={busy||externalBlocked} onClick={()=>void save()}>{busy?'正在保存…':'原请求重试 / 继续'}</button>{queue.canEditRemaining?<button type="button" disabled={externalBlocked} onClick={editRemaining}>结束原批次，修改未保存项</button>:null}</div>:null}
   {duplicatePending?<p className={styles.unresolved}>正在核对同名行动…</p>:null}
   {!queue&&duplicateState.status==='error'?<p role="alert" className={styles.unresolved}>同名行动核对失败，暂不能保存。<button type="button" onClick={()=>setLookupEpoch(n=>n+1)}>重新核对</button></p>:null}

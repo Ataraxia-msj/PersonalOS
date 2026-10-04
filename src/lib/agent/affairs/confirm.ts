@@ -2,7 +2,7 @@ import {executeFoundationCommand} from '@/lib/affairs/foundation-mutations';
 import {executeInboxCommand} from '@/lib/affairs/inbox-mutations';
 import {AffairsDatabaseError} from '@/lib/affairs/mutation-result';
 import type {AffairsQueryClient} from '@/lib/affairs/queries';
-import {getAgentAffairsOptions} from '@/lib/affairs/service';
+import {getAgentAffairsOptions,getAgentProjectParentEligibility} from '@/lib/affairs/service';
 import {validateAffairsCommand} from '@/lib/affairs/validation';
 import type {FoundationCommand,AffairsReceipt} from '@/lib/affairs/types';
 import {uuidPattern} from './preview';
@@ -15,7 +15,7 @@ const fields:Record<string,string[]>={mainline:['name','description','sort_order
 
 // Creates deliberately reach the existing RPC before rechecking parent state:
 // the owner-scoped RPC replays a committed request before checking new references.
-export async function confirmAgentAffairs(client:AffairsQueryClient,input:AffairsConfirmation,loadOptions:(client:AffairsQueryClient)=>Promise<AffairsAgentOptions>=getAgentAffairsOptions):Promise<AffairsConfirmationResult>{
+export async function confirmAgentAffairs(client:AffairsQueryClient,input:AffairsConfirmation,loadOptions:(client:AffairsQueryClient)=>Promise<AffairsAgentOptions>=getAgentAffairsOptions,checkProjectParent:typeof getAgentProjectParentEligibility=getAgentProjectParentEligibility):Promise<AffairsConfirmationResult>{
  if(!object(input)||typeof input.kind!=='string'||typeof input.requestId!=='string'||!uuidPattern.test(input.requestId))return fail('提交内容或标识无效，请检查预览。');
  if(input.kind==='reuse_mainline'||input.kind==='reuse_project'){
   if(!keys(input,['kind','requestId','objectId'])||typeof input.objectId!=='string'||!uuidPattern.test(input.objectId))return fail('复用标识无效。');
@@ -27,7 +27,7 @@ export async function confirmAgentAffairs(client:AffairsQueryClient,input:Affair
   }catch{return fail('暂时无法核对复用目标，请稍后重试。');}
  }
  if(!('payload' in input))return fail('缺少创建内容。');
- const allowed=fields[input.kind];
+ const allowed=Object.hasOwn(fields,input.kind)?fields[input.kind]:null;
  if(!allowed||!keys(input,['kind','requestId','payload'])||!object(input.payload)||!keys(input.payload,allowed))return fail('不支持的创建类型或字段。');
  for(const [key,value] of Object.entries(input.payload)){
   if(key==='is_core'){if(typeof value!=='boolean')return fail('核心资格格式无效。');}
@@ -40,6 +40,10 @@ export async function confirmAgentAffairs(client:AffairsQueryClient,input:Affair
  for(const [key,value] of Object.entries(input.payload))data.set(key,value===null?'':String(value));
  const parsed=validateAffairsCommand(data,new Date());
  if(!parsed.input)return fail(Object.values(parsed.errors).join('；'));
+ if(input.kind==='project'&&input.payload.mainline_id){
+  try{if(await checkProjectParent(client,input.requestId,input.payload.mainline_id)==='invalid')return fail('所属主线不存在或已归档，请重新选择；当前项没有保存。');}
+  catch{return fail('暂时无法核对所属主线，请使用原请求重试。');}
+ }
  try{
   const receipt=(parsed.input.operation==='create_affairs_inbox_entry'?await executeInboxCommand(client,parsed.input):await executeFoundationCommand(client,parsed.input as FoundationCommand)) as AffairsReceipt;
   return {status:'success',message:receipt.replayed?'已核对：原提交已保存，未重复创建。':'已保存到事务。',receipt,objectId:receipt.objectId,reused:false};

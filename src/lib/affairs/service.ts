@@ -11,6 +11,7 @@ export async function getAgentAffairsOptions(c:q.AffairsQueryClient,now=new Date
   return {mainlines:mainlines.map(m=>({id:m.id,name:m.name,status:m.status})),projects:projects.map(p=>({id:p.id,name:p.name,status:p.status,mainlineId:p.mainline_id})),serverNowISO:now.toISOString()};
 }
 export const getAgentTaskDuplicates=q.getAgentTaskDuplicateRows;
+export const getAgentProjectParentEligibility=q.getAgentProjectParentEligibility;
 export function createAffairsServices(
   clientFactory: () => Promise<q.AffairsQueryClient>,
 ) {
