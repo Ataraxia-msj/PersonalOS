@@ -36,6 +36,7 @@ export function ActionForm({
   onState,
   resetOnSuccess = false,
   receiptDisplay = "full",
+  onProtectionChange,
 }: {
   operation: AffairsOperation;
   identity?: { id: string; revision: string };
@@ -46,6 +47,7 @@ export function ActionForm({
   onState?: (state: AffairsActionState) => void;
   resetOnSuccess?: boolean;
   receiptDisplay?: "full" | "changes" | "none";
+  onProtectionChange?: (protectedForm: boolean) => void;
 }) {
   const router = useRouter();
   const [state, setState] = useState(initialAffairsActionState);
@@ -53,6 +55,11 @@ export function ActionForm({
   const [formEpoch, setFormEpoch] = useState(0);
   const [dirty, setDirty] = useState(false);
   const saved = useRef<FormData | null>(null);
+  const protectionCallback = useRef(onProtectionChange);
+  protectionCallback.current = onProtectionChange;
+  useEffect(() => {
+    protectionCallback.current?.(dirty || busy || state.status === 'uncertain');
+  }, [dirty, busy, state.status]);
   useEffect(() => {
     if (!dirty && !busy && state.status !== 'uncertain') return;
     const guard = (event: MouseEvent) => {

@@ -10,10 +10,12 @@ export function TaskCompletionPanel({
   task,
   currentBalance,
   action,
+  onProtectionChange,
 }: {
   task: AffairsTask;
   currentBalance: number;
   action: AffairsAction;
+  onProtectionChange?: (protectedForm: boolean) => void;
 }) {
   const [mode, setMode] = useState<"complete" | "reopen" | "undo" | null>(null);
   const [feedback, setFeedback] = useState<AffairsActionState | null>(null);
@@ -92,6 +94,7 @@ export function TaskCompletionPanel({
             }
             identity={task}
             onState={setFeedback}
+            onProtectionChange={onProtectionChange}
             submitLabel={
               mode === "complete"
                 ? task.isCore

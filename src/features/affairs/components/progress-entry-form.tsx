@@ -11,12 +11,14 @@ export function ProgressEntryForm({
   action,
   serverNowISO,
   embedded=false,
+  onSaved,
 }: {
   projects: AffairsProject[];
   tasks: AffairsTask[];
   action: AffairsAction;
   serverNowISO: string;
   embedded?:boolean;
+  onSaved?:()=>void;
 }) {
   const [open, setOpen] = useState(false);
   const [projectId, setProjectId] = useState("");
@@ -28,6 +30,7 @@ export function ProgressEntryForm({
           action={action}
           submitLabel="保存进展"
           resetOnSuccess={embedded} receiptDisplay={embedded?"none":"full"}
+          onState={s=>{if(s.status==='success'&&s.receipt)onSaved?.();}}
         >
           <label>
             项目

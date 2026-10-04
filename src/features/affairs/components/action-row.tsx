@@ -1,11 +1,14 @@
 "use client";
 import Link from "next/link";
+import {useRef} from 'react';
 import type {AffairsTask,AffairsProject} from "../types";
 import {ActionForm,type AffairsAction} from "./action-form";
 import {TaskCompletionPanel} from "./task-completion-panel";
 import styles from "./affairs.module.css";
 const labels={todo:"待开始",in_progress:"推进中",waiting:"等待",done:"已完成",cancelled:"已取消"};
-export function ActionRow({task,project,balance,action}:{task:AffairsTask;project:AffairsProject|null;balance:number;action:AffairsAction}) {
+export function ActionRow({task,project,balance,action,onProtectionChange}:{task:AffairsTask;project:AffairsProject|null;balance:number;action:AffairsAction;onProtectionChange?:(active:boolean)=>void}) {
+  const protection=useRef({completion:false,status:false});
+  function protect(kind:'completion'|'status',active:boolean){protection.current[kind]=active;onProtectionChange?.(protection.current.completion||protection.current.status);}
   const blocked =
               project?.status === "archived" || project?.status === "completed";
   return (
@@ -41,6 +44,7 @@ export function ActionRow({task,project,balance,action}:{task:AffairsTask;projec
                         task={task}
                         currentBalance={balance}
                         action={action}
+                        onProtectionChange={active=>protect('completion',active)}
                       />
                       {task.status !== "done" ? (
                         <details>
@@ -52,6 +56,7 @@ export function ActionRow({task,project,balance,action}:{task:AffairsTask;projec
                             operation="set_affairs_task_status"
                             identity={task}
                             submitLabel="保存状态"
+                            onProtectionChange={active=>protect('status',active)}
                           >
                             <label>
                               状态

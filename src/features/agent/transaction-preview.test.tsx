@@ -77,7 +77,7 @@ describe("TransactionPreview", () => {
     render(<TransactionPreview confirmAction={confirmAction} draft={draft} index={0} />);
     await user.click(screen.getByRole("button", { name: "确认并记录" }));
     expect(await screen.findByText(/预算月份已关闭/)).toBeVisible();
-    expect(screen.getByRole("button", { name: "已记录" })).toBeDisabled();
+    expect(await screen.findByRole("button", { name: "已记录" })).toBeDisabled();
   });
 
   it("keeps sibling cards independently confirmable after one deterministic failure", async () => {

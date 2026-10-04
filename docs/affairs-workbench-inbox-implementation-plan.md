@@ -10,6 +10,12 @@
 
 **Spec:** [affairs-workbench-inbox-design.md](affairs-workbench-inbox-design.md)，已选图位于 `docs/assets/affairs/`。
 
+## 执行状态（2026-10-04）
+
+Tasks 1–8 的主要代码、增量 migration 和对应回归已在 develop 实施。Task 9 的隔离 SQL 回归、构建及代码审查已运行；真实收集写入、独立 PostgreSQL 双会话并发与完整三断点视觉验收尚未通过。详细步骤是原始计划，最终证据与缺口以 `affairs-workbench-inbox-verification.md` 为准，不将计划中的预期断言当作实际验收结果。
+
+独立审查的五项 Important 进入一次 RED→GREEN 修复：未知完成请求跨刷新保留、浏览器历史保护、统一入口选项刷新、当前项目预填、手机来源抽屉保持同一表单。普通事务/细分状态筛选与分组、总览点击快捷入口和逐项解释列为后续小项；目前所有未完成行动仍可访问。
+
 ## Global Constraints
 
 - 分支 develop；保留未跟踪 `docs/affairs-rewards-design.md`，不创建 worktree、不修改已有已部署 migration。
@@ -265,4 +271,4 @@ expect(screen.queryByText('用阶段成果看见成长，不用任务数量代�
 
 覆盖：spec 1–3 → Tasks5/6/8；spec4 → Tasks4/6；spec5–6 → Tasks1/2/3/7；spec7–8 → Tasks3/4/6/7/8；spec9全部18项 → 对应单元/SQL断言与Task9真实验收；spec10 → 本计划执行顺序。五项Review Focus均有所属任务的明确输入/结果断言。
 
-当前只有计划，所有checkbox未完成；未生成migration、未改产品代码、未执行正式库SQL。用户“开始实施”作为整体设计批准；本计划仍需审核。推荐 Native：当前代理在develop顺序实施，各任务RED/GREEN后提交，避免接口依赖任务并行改同文件；计划确认后使用executing-plans，正式数据库执行与发布仍是单独步骤。
+用户“开始实施”已作为整体设计批准，当前代理在 develop 顺序执行并提交。新增 migration 已生成但未在正式库执行；不存在自动 merge/push/deploy。真实验收与发布仍是独立步骤。

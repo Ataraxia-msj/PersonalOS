@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
 import { AppHeader } from "@/components/shell/app-header";
+import { AffairsNavigationGuard } from "@/features/affairs/components/navigation-guard";
 
 import "./globals.css";
 
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="zh-CN">
       <body>
+        <AffairsNavigationGuard />
         <AppHeader />
         {children}
       </body>

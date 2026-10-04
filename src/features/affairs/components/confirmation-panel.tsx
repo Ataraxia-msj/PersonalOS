@@ -7,11 +7,13 @@ export function ConfirmationPanel({
   title,
   onClose,
   children,
+  inline = false,
 }: {
   open: boolean;
   title: string;
   onClose: () => void;
   children: ReactNode;
+  inline?: boolean;
 }) {
   const panel = useRef<HTMLElement>(null);
   const closeRef = useRef(onClose);
@@ -27,7 +29,7 @@ export function ConfirmationPanel({
       closeRef.current();
   };
   useEffect(() => {
-    if (!open) return;
+    if (!open || inline) return;
     const previous = document.activeElement as HTMLElement | null;
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -35,9 +37,9 @@ export function ConfirmationPanel({
     const focusable = () =>
       Array.from(
         root?.querySelectorAll<HTMLElement>(
-          "button:not(:disabled),a[href],input:not(:disabled):not([type=hidden]),select:not(:disabled),textarea:not(:disabled)",
+          "button:not(:disabled),a[href],input:not(:disabled):not([type=hidden]),select:not(:disabled),textarea:not(:disabled),summary",
         ) ?? [],
-      ).filter((el) => !el.closest("[hidden]"));
+      ).filter((el) => !el.closest("[hidden],fieldset:disabled") && !Array.from(root?.querySelectorAll('details:not([open])')??[]).some(d=>d.contains(el)&&d.querySelector(':scope > summary')!==el));
     (focusable()[0] ?? root)?.focus();
     const key = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -74,19 +76,19 @@ export function ConfirmationPanel({
       document.removeEventListener("keydown", key);
       if (previous?.isConnected) previous.focus();
     };
-  }, [open]);
+  }, [open, inline]);
   if (!open) return null;
   return (
     <div
-      className={styles.backdrop}
+      className={inline ? undefined : styles.backdrop}
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) close();
+        if (!inline && e.target === e.currentTarget) close();
       }}
     >
       <section
-        className={styles.panel}
-        role="dialog"
-        aria-modal="true"
+        className={inline ? styles.inboxAside : styles.panel}
+        role={inline ? undefined : "dialog"}
+        aria-modal={inline ? undefined : true}
         aria-label={title}
         tabIndex={-1}
         ref={panel}

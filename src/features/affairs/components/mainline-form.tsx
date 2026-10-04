@@ -6,7 +6,8 @@ export function MainlineForm({
   mode,
   action,
   embedded=false,
-}: AffairsBaseFormProps<"mainline"> & {embedded?:boolean}) {
+  onSaved,
+}: AffairsBaseFormProps<"mainline"> & {embedded?:boolean;onSaved?:()=>void}) {
   const v = data.initialValues;
   return (
     <section className={styles.formPage}>
@@ -22,6 +23,7 @@ export function MainlineForm({
         submitLabel="保存主线"
         resetOnSuccess={embedded}
         receiptDisplay={embedded?'none':'full'}
+        onState={s=>{if(s.status==='success'&&s.receipt)onSaved?.();}}
       >
         <label>
           主线名称
