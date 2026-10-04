@@ -1,5 +1,6 @@
 "use client";
 import {TaskFields} from "./entity-fields";
+import Link from 'next/link';
 import { ActionForm, type AffairsBaseFormProps } from "./action-form";
 import styles from "./affairs.module.css";
 import { formatAffairsTime } from "../format";
@@ -10,7 +11,7 @@ const statusLabels = {
   done: "已完成",
   cancelled: "已取消",
 };
-export function TaskForm({ data, mode, action }: AffairsBaseFormProps<"task">) {
+export function TaskForm({ data, mode, action,defaultProjectId=null }: AffairsBaseFormProps<"task"> & {defaultProjectId?:string|null}) {
   const v = data.initialValues;
   const project = data.projects.find((p) => p.id === v?.projectId);
   const blocked =
@@ -20,6 +21,7 @@ export function TaskForm({ data, mode, action }: AffairsBaseFormProps<"task">) {
   return (
     <section className={styles.formPage}>
       <h1>{mode === "create" ? "新建行动" : "编辑行动"}</h1>
+      {data.inboxSourceId?<Link href={'/affairs/inbox?status=resolved&entryId='+data.inboxSourceId}>查看收集来源</Link>:null}
       {blocked ? <p>请先重新打开行动或恢复项目，再编辑内容。</p> : null}
       <ActionForm
         action={action}
@@ -30,7 +32,7 @@ export function TaskForm({ data, mode, action }: AffairsBaseFormProps<"task">) {
         submitLabel="保存行动"
         disabled={blocked}
       >
-        <TaskFields initialValues={v} projects={data.projects}/>
+        <TaskFields initialValues={v??{projectId:defaultProjectId}} projects={data.projects}/>
       </ActionForm>
       {mode === "edit" ? (
         <section id="task-history" className={styles.section}>

@@ -8,6 +8,15 @@ import { executeFoundationCommand } from "@/lib/affairs/foundation-mutations";
 import { executeRewardCommand } from "@/lib/affairs/reward-mutations";
 import { AffairsDatabaseError } from "@/lib/affairs/mutation-result";
 import {executeInboxCommand} from '@/lib/affairs/inbox-mutations';
+import {createAffairsServices} from '@/lib/affairs/service';
+import type {QuickAddLoadState} from '@/features/affairs/types';
+export async function loadAffairsQuickAddAction():Promise<QuickAddLoadState> {
+  try {
+    const client=await createClient();const {data,error}=await client.auth.getClaims();
+    if(error||!data?.claims.sub) return {status:'error',message:'登录已失效，请重新登录。'};
+    return {status:'ready',data:await createAffairsServices(async()=>client).getAffairsQuickAddData()};
+  } catch {return {status:'error',message:'暂时无法加载创建选项，请重试。'};}
+}
 const messages: Record<string, string> = {
   authentication_required: "登录已失效，请重新登录。",
   invalid_payload: "输入内容无效，请检查表单。",

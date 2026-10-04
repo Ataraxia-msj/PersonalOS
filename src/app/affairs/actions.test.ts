@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
-import { submitAffairsAction } from "./actions";
+import { submitAffairsAction,loadAffairsQuickAddAction } from "./actions";
 import { initialAffairsActionState } from "@/lib/affairs/action-state";
 const form = () => {
   const f = new FormData();
@@ -41,6 +41,8 @@ beforeEach(() => {
   });
 });
 describe("authenticated affairs action", () => {
+  it('denies quick add options without validated claims',async()=>{mocks.claims.mockResolvedValue({data:null,error:null});expect((await loadAffairsQuickAddAction()).status).toBe('error');expect(mocks.rpc).not.toHaveBeenCalled();});
+  it('captures through exactly one authenticated inbox RPC',async()=>{const f=new FormData();f.set('operation','create_affairs_inbox_entry');f.set('requestId','a0000000-0000-0000-0000-000000000001');f.set('content','Original');expect((await submitAffairsAction(initialAffairsActionState,f)).status).toBe('success');expect(mocks.rpc).toHaveBeenCalledWith('create_affairs_inbox_entry',{p_request_id:'a0000000-0000-0000-0000-000000000001',p_content:'Original'});expect(mocks.claims).toHaveBeenCalledTimes(1);});
   it("rejects invalid session before writes", async () => {
     mocks.claims.mockResolvedValue({ data: null, error: null });
     expect(

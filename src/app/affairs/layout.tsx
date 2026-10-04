@@ -1,11 +1,10 @@
 import type { ReactNode } from "react";
+import {Suspense} from 'react';
+import {AffairsNavigation} from '@/features/affairs/components/affairs-navigation';
+import {AffairsShell} from '@/features/affairs/components/affairs-shell';
 import { AffairsTabs } from "@/features/affairs/components/affairs-tabs";
-import styles from "@/features/affairs/components/affairs.module.css";
 export default function Layout({ children }: { children: ReactNode }) {
   return (
-    <main className={styles.page}>
-      <AffairsTabs />
-      {children}
-    </main>
+    <AffairsShell navigation={<Suspense fallback={<AffairsTabs/>}><AffairsNavigation/></Suspense>}>{children}</AffairsShell>
   );
 }

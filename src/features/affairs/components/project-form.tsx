@@ -6,7 +6,8 @@ export function ProjectForm({
   data,
   mode,
   action,
-}: AffairsBaseFormProps<"project">) {
+  defaultMainlineId=null,
+}: AffairsBaseFormProps<"project"> & {defaultMainlineId?:string|null}) {
   const v = data.initialValues;
   const blocked = v?.status === "archived" || v?.status === "completed";
   return (
@@ -24,7 +25,7 @@ export function ProjectForm({
         submitLabel="保存项目"
         disabled={blocked}
       >
-        <ProjectFields initialValues={v} mainlines={data.mainlines}/>
+        <ProjectFields initialValues={v??{mainlineId:defaultMainlineId}} mainlines={data.mainlines}/>
       </ActionForm>
     </section>
   );

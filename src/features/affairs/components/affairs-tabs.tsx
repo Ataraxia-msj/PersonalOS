@@ -3,13 +3,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "./affairs.module.css";
 const tabs = [
-  ["/affairs", "推进"],
+  ["/affairs", "工作台"],
+  ["/affairs/inbox", "收集箱"],
   ["/affairs/projects", "项目"],
-  ["/affairs/tasks", "零散事务"],
   ["/affairs/shop", "奖励商店"],
   ["/affairs/coins", "金币记录"],
 ] as const;
-export function AffairsTabs() {
+export function AffairsTabs({pendingCount=null}:{pendingCount?:number|null}) {
   const path = usePathname();
   return (
     <nav className={styles.tabs} aria-label="事务导航">
@@ -24,6 +24,7 @@ export function AffairsTabs() {
           }
         >
           {label}
+          {href === '/affairs/inbox' ? <span className={styles.badge}>{pendingCount??'—'}</span> : null}
         </Link>
       ))}
     </nav>

@@ -3,45 +3,31 @@ import { useState } from "react";
 import type { AffairsProject, AffairsTask } from "../types";
 import { shanghaiInput } from "@/lib/affairs/validation";
 import { ActionForm, type AffairsAction } from "./action-form";
-import { ConfirmationPanel } from "./confirmation-panel";
+import { GuardedPanel } from "./guarded-panel";
 import styles from "./affairs.module.css";
 export function ProgressEntryForm({
   projects,
   tasks,
   action,
   serverNowISO,
+  embedded=false,
 }: {
   projects: AffairsProject[];
   tasks: AffairsTask[];
   action: AffairsAction;
   serverNowISO: string;
+  embedded?:boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [projectId, setProjectId] = useState("");
   const available = projects.filter(
     (p) => !["archived", "completed"].includes(p.status),
   );
-  return (
-    <>
-      <button
-        className={styles.primaryButton}
-        type="button"
-        onClick={() => setOpen(true)}
-      >
-        提交进展
-      </button>
-      <ConfirmationPanel
-        open={open}
-        title="提交进展"
-        onClose={() => setOpen(false)}
-      >
-        <p className={styles.muted}>
-          记录真实做了什么，以及下次从哪里继续。不宣告任务完成，也不发金币。
-        </p>
-        <ActionForm
+  const form=(<ActionForm
           operation="record_affairs_progress"
           action={action}
           submitLabel="保存进展"
+          resetOnSuccess={embedded} receiptDisplay={embedded?"none":"full"}
         >
           <label>
             项目
@@ -90,8 +76,7 @@ export function ProgressEntryForm({
               defaultValue={shanghaiInput(new Date(serverNowISO))}
             />
           </label>
-        </ActionForm>
-      </ConfirmationPanel>
-    </>
-  );
+        </ActionForm>);
+  if(embedded) return form;
+  return <><button className={styles.primaryButton} type="button" onClick={()=>setOpen(true)}>提交进展</button><GuardedPanel open={open} title="提交进展" onClose={()=>setOpen(false)}>{form}</GuardedPanel></>;
 }

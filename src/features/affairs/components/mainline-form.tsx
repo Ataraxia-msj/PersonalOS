@@ -5,12 +5,12 @@ export function MainlineForm({
   data,
   mode,
   action,
-}: AffairsBaseFormProps<"mainline">) {
+  embedded=false,
+}: AffairsBaseFormProps<"mainline"> & {embedded?:boolean}) {
   const v = data.initialValues;
   return (
     <section className={styles.formPage}>
-      <h1>{mode === "create" ? "新建主线" : "编辑主线"}</h1>
-      <p className={styles.muted}>主线是长期方向，不必设置人生完成百分比。</p>
+      {!embedded?<h1>{mode === "create" ? "新建主线" : "编辑主线"}</h1>:null}
       <ActionForm
         action={action}
         operation={
@@ -20,6 +20,8 @@ export function MainlineForm({
         }
         identity={v ?? undefined}
         submitLabel="保存主线"
+        resetOnSuccess={embedded}
+        receiptDisplay={embedded?'none':'full'}
       >
         <label>
           主线名称
