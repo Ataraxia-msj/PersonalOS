@@ -91,4 +91,54 @@ language sql security definer set search_path='' as $$
 $$;
 revoke all on function public.create_affairs_inbox_entry(uuid,text),public.update_affairs_inbox_entry(uuid,uuid,bigint,text),public.discard_affairs_inbox_entry(uuid,uuid,bigint),public.restore_affairs_inbox_entry(uuid,uuid,bigint) from public,anon,authenticated;
 grant execute on function public.create_affairs_inbox_entry(uuid,text),public.update_affairs_inbox_entry(uuid,uuid,bigint,text),public.discard_affairs_inbox_entry(uuid,uuid,bigint),public.restore_affairs_inbox_entry(uuid,uuid,bigint) to authenticated;
+-- AFFAIRS_INBOX_RESOLVE_START
+create function affairs_private.resolve_inbox(request uuid,args jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
+declare
+ u uuid:=affairs_private.require_user(); a jsonb:=args; data jsonb; v_result jsonb;
+ item public.affairs_inbox_entries; obj uuid; rev bigint; target_id uuid; target_rev bigint; kind text;
+ description_value text;
+begin
+ perform affairs_private.check_keys(a,array['id','expected_revision','target','payload']);
+ kind:=a->>'target';
+ if kind is null or kind not in('task','project') then raise exception 'invalid_payload'; end if;
+ data:=affairs_private.metadata(kind,a->'payload'); a:=jsonb_set(a,'{payload}',data);
+ perform affairs_private.lock_wallet();
+ v_result:=affairs_private.replay(request,'resolve_affairs_inbox_entry',a); if v_result is not null then return v_result; end if;
+ -- Same global order as the existing Affairs RPCs: wallet → projects → target.
+ perform 1 from public.affairs_projects where user_id=u order by id for update;
+ obj:=(a->>'id')::uuid;
+ select * into item from public.affairs_inbox_entries where user_id=u and id=obj for update;
+ if not found then raise exception 'not_found'; end if;
+ if (a->>'expected_revision')::bigint is distinct from item.revision then raise exception 'stale_revision'; end if;
+ if item.status<>'pending' then raise exception 'invalid_state_transition'; end if;
+ description_value:=affairs_private.clean_text(case
+  when data->>'description' is null or data->>'description'=item.content then item.content
+  else (data->>'description')||E'\n\n'||item.content end,10000,true);
+ if kind='task' then
+  perform affairs_private.assert_reference('project',(data->>'project_id')::uuid,true);
+  insert into public.affairs_tasks(user_id,project_id,title,description,is_core,core_reason,completion_criteria,due_date)
+  values(u,(data->>'project_id')::uuid,data->>'title',description_value,(data->>'is_core')::boolean,data->>'core_reason',data->>'completion_criteria',(data->>'due_date')::date)
+  returning id,revision into target_id,target_rev;
+ else
+  perform affairs_private.assert_reference('mainline',(data->>'mainline_id')::uuid);
+  insert into public.affairs_projects(user_id,mainline_id,name,outcome,description,due_date)
+  values(u,(data->>'mainline_id')::uuid,data->>'name',data->>'outcome',description_value,(data->>'due_date')::date)
+  returning id,revision into target_id,target_rev;
+ end if;
+ update public.affairs_inbox_entries set status='resolved',resolved_task_id=case when kind='task' then target_id end,
+ resolved_project_id=case when kind='project' then target_id end,resolved_at=now(),revision=revision+1,updated_at=now()
+ where id=obj returning revision into rev;
+ v_result:=affairs_private.receipt(request,'resolve_affairs_inbox_entry',a,obj,rev)||jsonb_build_object('resolved_resource',kind,'resolved_object_id',target_id,'resolved_object_revision',target_rev);
+ update public.affairs_commands set result=v_result where id=(v_result->>'command_id')::uuid and user_id=u;
+ return v_result;
+end $$;
+revoke all on function affairs_private.resolve_inbox(uuid,jsonb) from public,anon,authenticated;
+create function public.resolve_affairs_inbox_entry(p_request_id uuid,p_inbox_id uuid,p_expected_revision bigint,p_target text,p_payload jsonb)
+returns table(object_id uuid,object_revision bigint,command_id uuid,coin_delta integer,balance_coins bigint,replayed boolean,resolved_resource text,resolved_object_id uuid,resolved_object_revision bigint)
+language sql security definer set search_path='' as $$
+ select r.* from jsonb_to_record(affairs_private.resolve_inbox(p_request_id,jsonb_build_object('id',p_inbox_id,'expected_revision',p_expected_revision,'target',p_target,'payload',p_payload)))
+ as r(object_id uuid,object_revision bigint,command_id uuid,coin_delta integer,balance_coins bigint,replayed boolean,resolved_resource text,resolved_object_id uuid,resolved_object_revision bigint)
+$$;
+revoke all on function public.resolve_affairs_inbox_entry(uuid,uuid,bigint,text,jsonb) from public,anon,authenticated;
+grant execute on function public.resolve_affairs_inbox_entry(uuid,uuid,bigint,text,jsonb) to authenticated;
 commit;

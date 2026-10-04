@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+process.on('uncaughtException',e=>{console.error(e.message,e.detail??'',e.where??'');process.exit(1);});
 const { PGlite } = await import(pathToFileURL(resolve(process.argv[2])).href);
 const db = new PGlite();
 const file = p => readFile(new URL(p, import.meta.url), 'utf8');
@@ -71,6 +72,35 @@ try {
   assert.equal((await one("select count(*)::int n from pg_proc where proname='resolve_affairs_inbox_entry'")).n,1,'missing resolve_affairs_inbox_entry');
   // Resolve-specific assertions run after Task 2 adds the companion SQL.
   await db.exec(await file('./affairs_inbox_resolve.sql'));
+  await login(ownerA);
+  const sample=await one("select * from create_affairs_inbox_entry(gen_random_uuid(),'Pending original')");
+  const invalidProjects=[];
+  await login(ownerB);
+  invalidProjects.push((await one("select * from create_affairs_project(gen_random_uuid(),'{\"name\":\"Other owner\",\"outcome\":\"Goal\"}')")).object_id);
+  await login(ownerA);
+  const archived=await one("select * from create_affairs_project(gen_random_uuid(),'{\"name\":\"Archived\",\"outcome\":\"Goal\"}')");
+  await one("select * from set_affairs_project_status(gen_random_uuid(),$1,1,'archived',false)",[archived.object_id]);
+  invalidProjects.push(archived.object_id,'00000000-0000-0000-0000-000000000099');
+  for(const id of invalidProjects) await assert.rejects(db.query("select * from resolve_affairs_inbox_entry(gen_random_uuid(),$1,1,'task',$2)",[sample.object_id,{title:'Invalid parent',project_id:id}]),/not_found|invalid_state_transition/);
+  await login(ownerB);
+  await assert.rejects(db.query("select * from resolve_affairs_inbox_entry(gen_random_uuid(),$1,1,'task',$2)",[sample.object_id,{title:'Other owner'}]),/not_found/);
+  await db.exec('reset role');
+  await login(ownerA);
+  const beforeWrites=()=>rows("select (select count(*) from affairs_tasks) tasks,(select count(*) from affairs_projects) projects,(select count(*) from affairs_commands) commands,(select count(*) from affairs_coin_events) coins,(select count(*) from affairs_progress_entries) progress,(select last_sequence from affairs_wallets where user_id=auth.uid()) seq");
+  for(const target of ['affairs_tasks','affairs_inbox_entries','affairs_commands']) {
+   const snapshot=await beforeWrites(); const original=await rows('select * from affairs_inbox_entries where id=$1',[sample.object_id]);
+   await db.exec('reset role');
+   await db.exec(`create function public.affairs_inbox_test_fault() returns trigger language plpgsql as $$ begin raise exception 'injected_failure'; end $$;create trigger affairs_inbox_test_fault ${target==='affairs_commands'?'before':'after'} insert or update on public.${target} for each row execute function public.affairs_inbox_test_fault();`);
+   await login(ownerA);
+   await assert.rejects(db.query("select * from resolve_affairs_inbox_entry(gen_random_uuid(),$1,1,'task',$2)",[sample.object_id,{title:'Fault test'}]),/injected_failure/);
+   assert.deepEqual(await beforeWrites(),snapshot,'all writes rolled back');
+   assert.deepEqual(await rows('select * from affairs_inbox_entries where id=$1',[sample.object_id]),original);
+   await db.exec(`reset role;drop trigger affairs_inbox_test_fault on public.${target};drop function public.affairs_inbox_test_fault()`);
+   await login(ownerA);
+  }
+  await db.exec("reset role;set role anon;set request.jwt.claim.role='anon'");
+  await assert.rejects(db.query("select * from resolve_affairs_inbox_entry(gen_random_uuid(),$1,1,'task',$2)",[sample.object_id,{title:'No access'}]),/permission denied/);
+  await db.exec('reset role');
  }
  assert.deepEqual(await financeSnapshot(),before,'Finance untouched');
  console.log('PASS affairs inbox: owner RLS, capture lifecycle, Unicode, revisions, idempotency, auth-only, no DML, Finance/RPC contracts unchanged');
