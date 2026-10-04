@@ -18,7 +18,7 @@ export interface AffairsDraft extends ModelAffairsItem {
   issues:string[];
 }
 export interface AffairsInterpretation {
-  domain:'affairs';message:string;items:AffairsDraft[];options:AffairsAgentOptions;unresolvedSegments:string[];
+  domain:'affairs';message:string;items:AffairsDraft[];options:AffairsAgentOptions;unresolvedSegments:string[];duplicates:AffairsTaskDuplicate[];
 }
 export type AffairsConfirmation=
  | {kind:'mainline';requestId:string;payload:MainlineMetadata}
