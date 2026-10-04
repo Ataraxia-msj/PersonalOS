@@ -30,6 +30,7 @@ export function ProjectDetail({
           编辑项目
         </Link>
       </header>
+      {data.inboxSourceId?<Link href={'/affairs/inbox?status=resolved&entryId='+data.inboxSourceId}>查看收集来源</Link>:null}
       {blocked ? (
         <div className={styles.notice}>
           <p>请先恢复项目，再继续编辑或推进；历史记录保留。</p>

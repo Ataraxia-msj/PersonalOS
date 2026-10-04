@@ -48,20 +48,22 @@ export function createAffairsServices(
         serverNowISO: now.toISOString(),
       };
     },
-    async getAffairsProjectsData(): Promise<Ui.AffairsProject[]> {
+    async getAffairsProjectsData(): Promise<Ui.AffairsProjectsData> {
       const c = await clientFactory();
-      return (await q.getAffairsProjects(c)).map(a.adaptProject);
+      const [projects,mainlines]=await Promise.all([q.getAffairsProjects(c),q.getAffairsMainlines(c)]);
+      return {projects:projects.map(a.adaptProject),mainlines:mainlines.map(a.adaptMainline)};
     },
     async getAffairsProjectDetailData(
       projectId: string,
     ): Promise<Ui.AffairsProjectDetailData | null> {
       const c = await clientFactory();
-      const [pr, mi, ta, progress, balance] = await Promise.all([
+      const [pr, mi, ta, progress, balance,source] = await Promise.all([
         q.getAffairsProjects(c),
         q.getAffairsMilestones(c, projectId),
         q.getAffairsTasks(c, projectId),
         q.getAffairsProgress(c, { projectId }),
         q.getAffairsCoinBalance(c),
+        inbox.getAffairsResourceInboxSource(c,'project',projectId),
       ]);
       const project = pr.find((r) => r.id === projectId);
       return project
@@ -72,6 +74,7 @@ export function createAffairsServices(
             progress: progress.map(a.adaptProgress),
             balance: a.adaptBalance(balance),
             serverNowISO: new Date().toISOString(),
+            inboxSourceId:source?.id??null,
           }
         : null;
     },
@@ -130,7 +133,7 @@ export function createAffairsServices(
       id?: string,
     ): Promise<Ui.AffairsFormData | null> {
       const c = await clientFactory();
-      const [ml, pr, ta, rw, taskHistory] = await Promise.all([
+      const [ml, pr, ta, rw, taskHistory,source] = await Promise.all([
         q.getAffairsMainlines(c),
         q.getAffairsProjects(c),
         q.getAffairsTasks(c),
@@ -138,6 +141,7 @@ export function createAffairsServices(
         resource === "task" && id
           ? q.getAffairsTaskHistory(c, id)
           : Promise.resolve([]),
+        resource==='task'&&id ? inbox.getAffairsResourceInboxSource(c,'task',id):Promise.resolve(null),
       ]);
       const options = {
         mainlines: ml.map(a.adaptMainline),
@@ -173,6 +177,7 @@ export function createAffairsServices(
                 resource,
                 initialValues,
                 taskHistory: taskHistory.map(a.adaptTaskHistory),
+                inboxSourceId:source?.id??null,
               };
         }
         case "reward": {

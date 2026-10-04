@@ -1,73 +1,11 @@
 "use client";
-import { useState } from "react";
+import {useState} from "react";
 import Link from "next/link";
-import type { AffairsProject } from "../types";
+import type {AffairsProjectsData} from "../types";
+import {formatProgressRate} from "../format";
 import styles from "./affairs.module.css";
-export function ProjectList({ projects }: { projects: AffairsProject[] }) {
-  const [history, setHistory] = useState(false);
-  const visible = projects.filter((p) => history || p.status !== "archived");
-  return (
-    <section>
-      <header className={styles.sectionHeader}>
-        <div>
-          <h1>项目</h1>
-          <p className={styles.muted}>
-            用阶段成果看见成长，不用任务数量代替成果。
-          </p>
-        </div>
-        <Link className={styles.primaryButton} href="/affairs/projects/new">
-          新建项目
-        </Link>
-      </header>
-      <label className={styles.checkLabel}>
-        <input
-          type="checkbox"
-          checked={history}
-          onChange={(e) => setHistory(e.target.checked)}
-        />
-        显示归档历史
-      </label>
-      <div className={styles.cards}>
-        {visible.map((p) => (
-          <Link
-            className={styles.card}
-            key={p.id}
-            href={"/affairs/projects/" + p.id}
-          >
-            <span className={styles.eyebrow}>
-              {p.status === "active"
-                ? "推进中"
-                : p.status === "paused"
-                  ? "已暂停"
-                  : p.status === "completed"
-                    ? "已完成"
-                    : "已归档"}
-            </span>
-            <h2>{p.name}</h2>
-            <p>{p.outcome}</p>
-            {p.progressRate === null ? (
-              <p className={styles.muted}>尚未设置阶段成果</p>
-            ) : (
-              <>
-                <progress
-                  max="1"
-                  value={p.progressRate}
-                  aria-label={p.name + "阶段进度"}
-                />
-                <p>
-                  {Math.round(p.progressRate * 100)}% · {p.milestoneCompleted} /{" "}
-                  {p.milestoneTotal} 阶段成果
-                </p>
-              </>
-            )}
-          </Link>
-        ))}
-      </div>
-      {visible.length === 0 ? (
-        <p className={styles.empty}>
-          还没有项目。可以独立创建，也可以关联一条长期主线。
-        </p>
-      ) : null}
-    </section>
-  );
+export function ProjectList({projects,mainlines}:AffairsProjectsData) {
+ const [filter,setFilter]=useState('current'),[mainline,setMainline]=useState('all');const labels={active:'进行中',paused:'已暂停',completed:'已完成',archived:'已归档'};
+ const visible=projects.filter(p=>(filter==='all'||(filter==='current'?p.status!=='archived':p.status===filter))&&(mainline==='all'||(mainline==='independent'?!p.mainlineId:p.mainlineId===mainline)));
+ return <section><div className={styles.filters}>{[['current','当前项目'],['active','进行中'],['paused','已暂停'],['completed','已完成'],['archived','已归档'],['all','全部']].map(([key,label])=><button type="button" key={key} aria-pressed={filter===key} className={filter===key?styles.selectedFilter:styles.filter} onClick={()=>setFilter(key)}>{label}</button>)}<label className={styles.projectSelect}>所属主线<select value={mainline} onChange={e=>setMainline(e.target.value)}><option value="all">全部主线</option><option value="independent">独立项目</option>{mainlines.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label></div><div className={styles.projectTable}>{visible.map(p=><article key={p.id} className={styles.projectTableRow}><div><Link href={'/affairs/projects/'+p.id}>{p.name}</Link><small>{mainlines.find(m=>m.id===p.mainlineId)?.name??'独立项目'}</small></div><span className={styles.badge}>{labels[p.status]}</span><div className={styles.projectRate}>{p.progressRate!==null?<progress value={p.progressRate} max="1" aria-label={p.name+'阶段进度'}/>:null}<span>{p.progressRate===null?"—":formatProgressRate(p.progressRate)}</span></div></article>)}</div>{!visible.length?<p className={styles.muted}>暂无符合条件的项目。</p>:null}</section>;
 }
