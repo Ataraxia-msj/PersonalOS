@@ -169,7 +169,7 @@ type AffairsTables = {
 type AffairsFunctions = {
   [K in keyof AffairsRpcArgsMap]: {
     Args: AffairsRpcArgsMap[K];
-    Returns: AffairsRpcReceiptRow[];
+    Returns: K extends 'resolve_affairs_inbox_entry' ? import('@/lib/affairs/inbox-types').InboxResolveReceiptRow[] : AffairsRpcReceiptRow[];
   };
 };
 export interface Database {

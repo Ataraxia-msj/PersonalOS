@@ -11,6 +11,11 @@ import type {
   DailyContributionRow,
   CommandRow,
 } from "@/lib/affairs/types";
+import type {InboxEntryRow} from '@/lib/affairs/inbox-types';
+export type AffairsInboxEntry=MutableUi<InboxEntryRow>;
+export interface AffairsQuickAddData {mainlines:AffairsMainline[];projects:AffairsProject[];tasks:AffairsTask[];serverNowISO:string;}
+export interface AffairsInboxData extends AffairsQuickAddData {entries:AffairsInboxEntry[];}
+export type QuickAddLoadState={status:'ready';data:AffairsQuickAddData}|{status:'error';message:string};
 export interface AffairsTaskHistory {
   id: string;
   taskId: string;

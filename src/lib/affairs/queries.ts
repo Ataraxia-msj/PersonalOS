@@ -24,7 +24,7 @@ function read<T>(name: string, data: T, error: QueryError | null): T {
   if (error) throw new Error(`${name}: ${error.code ?? ""} ${error.message}`);
   return data;
 }
-async function allRows<T>(
+export async function allRows<T>(
   name: string,
   q: {
     range: (
@@ -87,15 +87,7 @@ export async function getAffairsTaskHistory(
   const q = c
     .from("affairs_commands")
     .select("*")
-    .eq("result->>object_id", taskId)
-    .in("operation", [
-      "create_affairs_task",
-      "update_affairs_task",
-      "set_affairs_task_status",
-      "complete_affairs_task",
-      "reopen_affairs_task",
-      "undo_affairs_task_completion",
-    ])
+    .or(`and(operation.in.(create_affairs_task,update_affairs_task,set_affairs_task_status,complete_affairs_task,reopen_affairs_task,undo_affairs_task_completion),result->>object_id.eq.${taskId}),and(operation.eq.resolve_affairs_inbox_entry,result->>resolved_resource.eq.task,result->>resolved_object_id.eq.${taskId})`)
     .order("applied_at", { ascending: false })
     .order("id");
   return allRows<CommandRow>("affairs_commands", q);

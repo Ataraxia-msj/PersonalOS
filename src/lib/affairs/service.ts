@@ -1,12 +1,26 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAffairsServerClient } from "./server-client";
 import type * as Ui from "@/features/affairs/types";
 import * as q from "./queries";
 import * as a from "./adapters";
 import { shanghaiInput } from "./validation";
+import * as inbox from './inbox-queries';
+import type {InboxStatus} from './inbox-types';
 export function createAffairsServices(
   clientFactory: () => Promise<q.AffairsQueryClient>,
 ) {
   return {
+    async getAffairsInboxData(status:InboxStatus='pending'):Promise<Ui.AffairsInboxData> {
+      const c=await clientFactory();const [entries,ml,pr,ta]=await Promise.all([inbox.getAffairsInboxEntries(c,status),q.getAffairsMainlines(c),q.getAffairsProjects(c),q.getAffairsTasks(c)]);
+      return {entries:entries.map(a.adaptInboxEntry),mainlines:ml.map(a.adaptMainline),projects:pr.map(a.adaptProject),tasks:ta.map(a.adaptTask),serverNowISO:new Date().toISOString()};
+    },
+    async getAffairsNavigationData():Promise<{pendingCount:number|null;unavailable:boolean}> {
+      try {return {pendingCount:await inbox.getAffairsInboxPendingCount(await clientFactory()),unavailable:false};}
+      catch {return {pendingCount:null,unavailable:true};}
+    },
+    async getAffairsQuickAddData():Promise<Ui.AffairsQuickAddData> {
+      const c=await clientFactory();const [ml,pr,ta]=await Promise.all([q.getAffairsMainlines(c),q.getAffairsProjects(c),q.getAffairsTasks(c)]);
+      return {mainlines:ml.map(a.adaptMainline),projects:pr.map(a.adaptProject),tasks:ta.map(a.adaptTask),serverNowISO:new Date().toISOString()};
+    },
     async getAffairsDashboardData(
       now = new Date(),
     ): Promise<Ui.AffairsDashboardData> {
@@ -178,6 +192,9 @@ export function createAffairsServices(
   };
 }
 export const {
+  getAffairsInboxData,
+  getAffairsNavigationData,
+  getAffairsQuickAddData,
   getAffairsDashboardData,
   getAffairsProjectsData,
   getAffairsProjectDetailData,
@@ -185,4 +202,4 @@ export const {
   getAffairsShopData,
   getAffairsCoinsData,
   getAffairsFormData,
-} = createAffairsServices(createClient);
+} = createAffairsServices(getAffairsServerClient);

@@ -89,6 +89,7 @@ it("passes real task cancel/restore command history through the service and adap
       select: () => chain,
       eq: () => chain,
       in: () => chain,
+      or: () => chain,
       order: () => chain,
       range: async () => ({ data: rows[name] ?? [], error: null }),
     };

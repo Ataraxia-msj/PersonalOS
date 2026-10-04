@@ -7,6 +7,7 @@ import type { AffairsReceipt } from "@/lib/affairs/types";
 import { executeFoundationCommand } from "@/lib/affairs/foundation-mutations";
 import { executeRewardCommand } from "@/lib/affairs/reward-mutations";
 import { AffairsDatabaseError } from "@/lib/affairs/mutation-result";
+import {executeInboxCommand} from '@/lib/affairs/inbox-mutations';
 const messages: Record<string, string> = {
   authentication_required: "登录已失效，请重新登录。",
   invalid_payload: "输入内容无效，请检查表单。",
@@ -50,6 +51,13 @@ export async function submitAffairsAction(
     const command = validated.input;
     let receipt: AffairsReceipt;
     switch (command.operation) {
+      case 'create_affairs_inbox_entry':
+      case 'update_affairs_inbox_entry':
+      case 'discard_affairs_inbox_entry':
+      case 'restore_affairs_inbox_entry':
+      case 'resolve_affairs_inbox_entry':
+        receipt=await executeInboxCommand(client,command);
+        break;
       case "create_affairs_mainline":
       case "create_affairs_project":
       case "create_affairs_task":

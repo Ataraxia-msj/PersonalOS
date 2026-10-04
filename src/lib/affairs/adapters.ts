@@ -1,6 +1,13 @@
 import type * as Row from "./types";
 import type * as Ui from "@/features/affairs/types";
 import { decimalInteger, safeInteger } from "./validation";
+import type {InboxEntryRow,InboxResolveReceiptRow,InboxResolveReceipt} from './inbox-types';
+export function adaptInboxEntry(r:InboxEntryRow):Ui.AffairsInboxEntry {return {...camel<Ui.AffairsInboxEntry>(r),revision:revision(r)};}
+export function adaptInboxResolveReceipt(r:InboxResolveReceiptRow):InboxResolveReceipt {
+ if(!r||!['task','project'].includes(r.resolved_resource)||typeof r.resolved_object_id!=='string'||!r.resolved_object_id) throw new Error('invalid_resolve_receipt');
+ const rev=decimalInteger(r.resolved_object_revision);if(rev==='0') throw new Error('invalid_resolve_receipt');
+ return {...adaptReceipt(r),resolvedResource:r.resolved_resource,resolvedObjectId:r.resolved_object_id,resolvedObjectRevision:rev};
+}
 function camel<T>(row: unknown): T {
   if (!row || typeof row !== "object") throw new Error("invalid_affairs_row");
   return Object.fromEntries(
@@ -95,6 +102,8 @@ export function adaptCoinEntry(r: Row.CoinLedgerRow): Ui.AffairsCoinEntry {
   };
 }
 export function adaptTaskHistory(r: Row.CommandRow): Ui.AffairsTaskHistory {
+  const resolved=r.operation==='resolve_affairs_inbox_entry'?adaptInboxResolveReceipt(r.result as InboxResolveReceiptRow):null;
+  if(resolved&&resolved.resolvedResource!=='task') throw new Error('invalid_task_history_source');
   const statuses = [
     "todo",
     "in_progress",
@@ -104,7 +113,7 @@ export function adaptTaskHistory(r: Row.CommandRow): Ui.AffairsTaskHistory {
   ] as const;
   let status: Row.TaskStatus | null = null;
   if (
-    r.operation === "create_affairs_task" ||
+    resolved || r.operation === "create_affairs_task" ||
     r.operation === "reopen_affairs_task" ||
     r.operation === "undo_affairs_task_completion"
   )
@@ -121,10 +130,10 @@ export function adaptTaskHistory(r: Row.CommandRow): Ui.AffairsTaskHistory {
   const reason = r.payload.reason ?? r.payload.waiting_reason;
   return {
     id: r.id,
-    taskId: r.result.object_id,
+    taskId: resolved?.resolvedObjectId??r.result.object_id,
     operation: r.operation,
     appliedAt: r.applied_at,
-    revision: decimalInteger(r.result.object_revision),
+    revision: resolved?.resolvedObjectRevision??decimalInteger(r.result.object_revision),
     status,
     reason: typeof reason === "string" ? reason : null,
     coinDelta: safeInteger(r.result.coin_delta),

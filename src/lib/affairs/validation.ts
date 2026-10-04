@@ -4,6 +4,8 @@ import type {
   MilestoneMetadata,
   ValidationResult,
 } from "./types";
+import {isInboxOperation} from './inbox-types';
+import {validateInboxCommand} from './inbox-validation';
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const maximumBigint = BigInt("9223372036854775807");
@@ -77,6 +79,7 @@ export function validateAffairsCommand(
   data: FormData,
   now: Date,
 ): ValidationResult<AffairsCommand> {
+  if(isInboxOperation(data.get('operation'))) return validateInboxCommand(data);
   const errors: Record<string, string> = {};
   const allowed = new Set(["operation", "requestId"]);
   const raw = (key: string) => {

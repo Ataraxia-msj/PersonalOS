@@ -33,6 +33,7 @@ function query(data: unknown = [], error: unknown = null) {
       calls.push(["limit", ...v]);
       return chain;
     },
+    or: (...v:unknown[])=>{calls.push(['or',...v]);return chain;},
     range: (...v: unknown[]) => {
       calls.push(["range", ...v]);
       return Promise.resolve({ data, error });
@@ -85,25 +86,15 @@ describe("real affairs queries", () => {
       "a0000000-0000-0000-0000-000000000001",
     );
     expect(q.from).toHaveBeenCalledWith("affairs_commands");
-    expect(q.calls).toContainEqual([
-      "eq",
-      "result->>object_id",
-      "a0000000-0000-0000-0000-000000000001",
-    ]);
+    expect(q.calls.find(c=>c[0]==='or')).toEqual(['or',expect.stringContaining('result->>object_id.eq.a0000000-0000-0000-0000-000000000001')]);
     expect(q.calls).toContainEqual([
       "order",
       "applied_at",
       { ascending: false },
     ]);
-    expect(q.calls.find((c) => c[0] === "in")).toEqual([
-      "in",
-      "operation",
-      expect.arrayContaining([
-        "set_affairs_task_status",
-        "complete_affairs_task",
-        "reopen_affairs_task",
-        "undo_affairs_task_completion",
-      ]),
-    ]);
+    const filter=String(q.calls.find(c=>c[0]==='or')?.[1]);
+    expect(filter).toContain('operation.eq.resolve_affairs_inbox_entry');
+    expect(filter).toContain('result->>resolved_resource.eq.task');
+    expect(filter).toContain('result->>resolved_object_id.eq.a0000000-0000-0000-0000-000000000001');
   });
 });

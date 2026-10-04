@@ -1,3 +1,4 @@
+import type {InboxEntryRow,InboxRpcArgsMap,InboxOperation,InboxResolveReceiptRow} from './inbox-types';
 export type DbInteger = number | string;
 export type MainlineStatus = "active" | "paused" | "archived";
 export type ProjectStatus = MainlineStatus | "completed";
@@ -113,10 +114,11 @@ export interface CommandRow extends BaseRow {
   request_id: string;
   operation: string;
   payload: Record<string, unknown>;
-  result: AffairsRpcReceiptRow;
+  result: AffairsRpcReceiptRow | InboxResolveReceiptRow;
   applied_at: string;
 }
 export interface AffairsRowMap {
+  inbox_entries: InboxEntryRow;
   mainlines: MainlineRow;
   projects: ProjectRow;
   milestones: MilestoneRow;
@@ -198,7 +200,7 @@ export interface RewardMetadata {
   price_coins: number;
   is_active: boolean;
 }
-export interface AffairsRpcArgsMap {
+export interface AffairsRpcArgsMap extends InboxRpcArgsMap {
   create_affairs_mainline: {
     p_request_id: string;
     p_payload: MainlineMetadata;
@@ -339,7 +341,7 @@ export type RewardOperation =
   | "cancel_affairs_redemption";
 export type FoundationCommand = Exclude<
   AffairsCommand,
-  { operation: RewardOperation }
+  { operation: RewardOperation | InboxOperation }
 >;
 export type RewardCommand = Extract<
   AffairsCommand,

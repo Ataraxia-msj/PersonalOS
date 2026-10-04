@@ -9,13 +9,13 @@ export class AffairsDatabaseError extends Error {
     this.name = "AffairsDatabaseError";
   }
 }
-export async function readAffairsReceipt(
+export async function readAffairsRpcRow<T>(
   result: PromiseLike<{
-    data: AffairsRpcReceiptRow[] | null;
+    data: T[] | null;
     error: { code: string; message: string } | null;
     status?: number;
   }>,
-): Promise<AffairsReceipt> {
+): Promise<T> {
   const { data, error, status } = await result;
   if (error) {
     // Postgrest-js resolves fetch failures with code="", status=0. A lost
@@ -33,5 +33,6 @@ export async function readAffairsReceipt(
     throw new AffairsDatabaseError(error.code, error.message);
   }
   if (!data || data.length !== 1) throw new Error("missing_receipt");
-  return adaptReceipt(data[0]);
+  return data[0];
 }
+export async function readAffairsReceipt(result:PromiseLike<{data:AffairsRpcReceiptRow[]|null;error:{code:string;message:string}|null;status?:number}>):Promise<AffairsReceipt> {return adaptReceipt(await readAffairsRpcRow(result));}
