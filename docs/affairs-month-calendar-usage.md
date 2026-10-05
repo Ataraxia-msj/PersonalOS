@@ -1,8 +1,8 @@
 # 事务月历使用与上线顺序
 
-代码在 develop；本地实现和隔离验证完成，正式库尚未核对或执行新迁移。未合并 main、推送或发布。
+本地实现和隔离验证完成。用户已执行正式库迁移并提供 preflight/postflight：三个函数原定义一致，6 个排期字段和 2 个约束已出现，非法记录为 0，权限/RLS/security_invoker 保留。用户现已授权合并 main 并推送生产端；真实录入/完成回执尚未进行线上验收。
 
-## 你现在需要做的第一步
+## 部署前核对（本轮已完成，不要重复迁移）
 
 打开 [部署前只读核对 SQL](../supabase/checks/affairs_schedule_preflight.sql)，复制完整内容，在现有 Supabase 项目的 SQL Editor 执行。复制返回的单个 `report` JSON 单元格（或导出 JSON 文件）发回来。不需要密码、secret 或数据库连接串。
 
