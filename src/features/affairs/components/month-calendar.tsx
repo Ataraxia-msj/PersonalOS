@@ -9,9 +9,11 @@ import {canLeaveAffairsForm} from "./guarded-panel";
 import {TaskCompletionPanel} from "./task-completion-panel";
 import {CalendarItemDetails} from "./calendar-item-details";
 import styles from "./month-calendar.module.css";
+const timeOnDate=(item:CalendarItem,date:string)=>item.endDate===date?item.time:null;
 function dayItems(week:CalendarWeek,column:number):CalendarItem[] {
  const all=[...week.days[column].items,...week.segments.filter(s=>column>=s.startColumn&&column<s.startColumn+s.span).map(s=>s.item)];
- return [...new Map(all.map(i=>[i.key,i])).values()].sort((a,b)=>(a.time??"99:99").localeCompare(b.time??"99:99")||a.title.localeCompare(b.title)||a.key.localeCompare(b.key));
+ const date=week.days[column].date;
+ return [...new Map(all.map(i=>[i.key,i])).values()].sort((a,b)=>(timeOnDate(a,date)??"99:99").localeCompare(timeOnDate(b,date)??"99:99")||a.title.localeCompare(b.title)||a.key.localeCompare(b.key));
 }
 function tone(item:CalendarItem):number {let hash=0;for(const char of item.key)hash=(hash*31+char.charCodeAt(0))>>>0;return hash%3;}
 type Selection={item:CalendarItem;task:AffairsTask|null;project:AffairsProject|null;mode:"details"|"complete"};
@@ -30,10 +32,10 @@ export function MonthCalendar({model,tasks,projects,balance,action,onCreateTask}
   setSelection({item:{...item},task:task?{...task}:null,project:project?{...project}:null,mode});
  };
  const create=(date:string)=>{if(scheduleDate(date)&&guard())onCreateTask(date);};
- const entry=(item:CalendarItem,compact=false)=><div className={styles.entry} key={item.key}>
+ const entry=(item:CalendarItem,compact=false,date?:string)=><div className={styles.entry} key={item.key}>
   {item.resource==="task"?<button type="button" className={styles.check} aria-label={"完成："+item.title} onClick={()=>open(item,"complete")}><IconSquare size={16} aria-hidden="true"/></button>:null}
   <button type="button" className={styles.itemTitle} aria-label={"查看"+(item.resource==="project"?"项目":"行动")+"："+item.title} onClick={()=>open(item,"details")}>
-   {item.time?<><IconCircleFilled size={8} aria-hidden="true"/><time>{item.time}</time></>:null}<span>{item.title}</span>
+   {item.time&&(!date||timeOnDate(item,date))?<><IconCircleFilled size={8} aria-hidden="true"/><time>{item.time}</time></>:null}<span>{item.title}</span>
   </button>{!compact&&item.projectName?<small>{item.projectName}</small>:null}
  </div>;
  let selectedItems:CalendarItem[]=[];
@@ -54,23 +56,23 @@ export function MonthCalendar({model,tasks,projects,balance,action,onCreateTask}
        {d.items.length?<IconCircleFilled size={4} className={styles.pointIndicator} aria-hidden="true"/>:null}
       </button>
       <div className={styles.points} style={{gridColumn:col+1,gridRow:laneCount+2}}>
-       {d.items.slice(0,2).map(i=>entry(i,true))}
+       {d.items.slice(0,2).map(i=>entry(i,true,d.date))}
        {extra?<button className={styles.more} type="button" aria-label={`展开${d.date}的全部安排`} onClick={()=>selectDay(d.date,true)}>+{extra}</button>:null}
       </div>
      </div>;
     })}
     {visible.map(s=><div className={styles.segment} key={s.item.key} data-tone={tone(s.item)} data-before={s.continuesBefore} data-after={s.continuesAfter} style={{gridColumn:`${s.startColumn+1} / span ${s.span}`,gridRow:s.lane+2}}>
      {s.item.resource==="task"?<button type="button" className={styles.check} aria-label={"完成："+s.item.title} onClick={()=>open(s.item,"complete")}><IconSquare size={15} aria-hidden="true"/></button>:null}
-     <button type="button" className={styles.rangeTitle} aria-label={"查看"+(s.item.resource==="project"?"项目":"行动")+"："+s.item.title+"（"+s.item.startDate+"至"+s.item.endDate+"）"} onClick={()=>open(s.item,"details")}><span>{s.item.title}</span>{s.continuesAfter?<IconChevronRight size={14} aria-hidden="true"/>:null}</button>
+     <button type="button" className={styles.rangeTitle} aria-label={"查看"+(s.item.resource==="project"?"项目":"行动")+"："+s.item.title+"（"+s.item.startDate+"至"+s.item.endDate+"）"} onClick={()=>open(s.item,"details")}><span>{s.item.title}</span>{s.item.time&&!s.continuesAfter?<time dateTime={s.item.endDate+"T"+s.item.time} title={s.item.endDate+" 截止时间 · 上海"}>{s.item.time}</time>:null}{s.continuesAfter?<IconChevronRight size={14} aria-hidden="true"/>:null}</button>
     </div>)}
    </div>;
   })}
   <section aria-label={day+" 的安排"} className={expanded?styles.dayListExpanded:styles.dayList}>
    <header><h3>{day}</h3><button type="button" onClick={()=>create(day)}>新增行动</button>{expanded?<button type="button" onClick={()=>{if(guard())setExpanded(false);}}>收起</button>:null}</header>
-   {selectedItems.length?selectedItems.map(i=>entry(i)):<p>暂无安排</p>}
+   {selectedItems.length?selectedItems.map(i=>entry(i,false,day)):<p>暂无安排</p>}
   </section>
   {model.unscheduled.length?<details className={styles.unscheduled}><summary>未安排 · {model.unscheduled.length}</summary>{model.unscheduled.map(i=>entry(i))}</details>:null}
-  {selection?.mode==="details"?<CalendarItemDetails key={selection.item.key} {...selection} balance={balance} action={action} onClose={()=>setSelection(null)}/>:null}
+  {selection?.mode==="details"?<CalendarItemDetails key={selection.item.key} {...selection} balance={balance} action={action} onClose={()=>setSelection(null)} onComplete={()=>setSelection({...selection,mode:"complete"})}/>:null}
   {selection?.mode==="complete"&&selection.task?<TaskCompletionPanel key={selection.item.key} task={selection.task} currentBalance={balance} action={action} initialMode="complete" hideTrigger onClose={()=>setSelection(null)}/>:null}
  </div>;
 }

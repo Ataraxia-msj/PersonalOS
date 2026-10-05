@@ -1,4 +1,4 @@
-import {render,screen,waitFor} from "@testing-library/react";
+import {render,screen,waitFor,within} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {it,expect,vi} from "vitest";
 import type {AffairsTask,AffairsProject} from "../types";
@@ -44,4 +44,37 @@ it("exposes overflow and unscheduled records without loss, and creates only afte
  expect(screen.getByRole("region",{name:"2026-10-08 的安排"})).toHaveTextContent("任务4");
  await userEvent.click(screen.getByText("未安排 · 1"));expect(screen.getByRole("button",{name:"查看项目：系统"})).toBeVisible();
  await userEvent.click(screen.getByRole("button",{name:"新增行动：2026-10-06"}));expect(create).toHaveBeenCalledWith("2026-10-06");
+});
+it("switches details to one completion dialog and restores scrolling on Escape and successful close",async()=>{
+ const action=vi.fn(async()=>({status:"success" as const,receipt:{objectId:"t",revision:"2",commandId:"c",coinDelta:0,balanceAtCommand:0,replayed:false},fieldErrors:{},message:"完成已保存"}));
+ render(<MonthCalendar model={buildMonthCalendar([],[task],"2026-10","2026-10-05")} tasks={[task]} projects={[]} balance={0} action={action} onCreateTask={vi.fn()}/>);
+ await userEvent.click(screen.getByRole("button",{name:"查看行动：准备面试材料"}));
+ await userEvent.click(screen.getByRole("button",{name:"确认完成"}));
+ expect(screen.getAllByRole("dialog")).toHaveLength(1);
+ await userEvent.keyboard("{Escape}");
+ expect(screen.queryByRole("dialog")).toBeNull();expect(document.body.style.overflow).toBe("");
+ await userEvent.click(screen.getByRole("button",{name:"完成：准备面试材料"}));
+ await userEvent.click(screen.getByLabelText("确认已满足完成条件"));
+ const confirm=vi.spyOn(window,"confirm").mockReturnValue(false);
+ await userEvent.keyboard("{Escape}");
+ expect(screen.getByRole("dialog")).toBeVisible();expect(confirm).toHaveBeenCalledTimes(1);
+ await userEvent.click(screen.getByRole("button",{name:"确认完成行动"}));await screen.findByText("完成已保存");
+ await userEvent.click(screen.getByRole("button",{name:"关闭确认"}));
+ expect(screen.queryByRole("dialog")).toBeNull();expect(document.body.style.overflow).toBe("");
+ confirm.mockRestore();
+});
+it("shows a ranged clock only on its deadline day and final weekly segment, retaining full details",async()=>{
+ const ranged={...task,plannedStartDate:"2026-10-01"};
+ render(<MonthCalendar model={buildMonthCalendar([],[ranged],"2026-10","2026-10-05")} tasks={[ranged]} projects={[]} balance={0} action={vi.fn()} onCreateTask={vi.fn()}/>);
+ const early=screen.getByRole("region",{hidden:true});expect(early).toHaveAttribute("aria-label","2026-10-05 的安排");
+ expect(within(early).queryByText("10:30")).toBeNull();
+ const bars=screen.getAllByRole("button",{name:/查看行动：准备面试材料（/});
+ expect(bars).toHaveLength(2);expect(bars[0]).not.toHaveTextContent("10:30");expect(bars[1]).toHaveTextContent("10:30");
+ await userEvent.click(bars[0]);
+ expect(within(screen.getByRole("dialog")).getByText("10:30 · 上海")).toBeVisible();
+ await userEvent.keyboard("{Escape}");
+ await userEvent.click(screen.getByRole("button",{name:"查看日期：2026-10-08"}));
+ const deadline=screen.getByRole("region",{hidden:true});expect(deadline).toHaveAttribute("aria-label","2026-10-08 的安排");
+ expect(within(deadline).getAllByText("10:30")).toHaveLength(1);
+ expect(within(deadline).getAllByRole("button",{hidden:true}).filter(b=>b.getAttribute("aria-label")==="查看行动：准备面试材料")).toHaveLength(1);
 });
