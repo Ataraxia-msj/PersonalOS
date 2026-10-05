@@ -11,7 +11,7 @@ const statusLabels = {
   done: "已完成",
   cancelled: "已取消",
 };
-export function TaskForm({ data, mode, action,defaultProjectId=null }: AffairsBaseFormProps<"task"> & {defaultProjectId?:string|null}) {
+export function TaskForm({ data, mode, action,defaultProjectId=null,defaultDueDate=null }: AffairsBaseFormProps<"task"> & {defaultProjectId?:string|null;defaultDueDate?:string|null}) {
   const v = data.initialValues;
   const project = data.projects.find((p) => p.id === v?.projectId);
   const blocked =
@@ -32,7 +32,7 @@ export function TaskForm({ data, mode, action,defaultProjectId=null }: AffairsBa
         submitLabel="保存行动"
         disabled={blocked}
       >
-        <TaskFields initialValues={v??{projectId:defaultProjectId}} projects={data.projects}/>
+        <TaskFields initialValues={v??{projectId:defaultProjectId,dueDate:defaultDueDate}} projects={data.projects}/>
       </ActionForm>
       {mode === "edit" ? (
         <section id="task-history" className={styles.section}>

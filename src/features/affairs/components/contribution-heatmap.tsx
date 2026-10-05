@@ -26,10 +26,6 @@ export function ContributionHeatmap({
     : [];
   return (
     <section>
-      <header className={styles.sectionHeader}>
-        <h2>推进轨迹</h2>
-        <span className={styles.muted}>近半年 · 全部主线</span>
-      </header>
       <div className={styles.heatmapScroll}>
         <div className={styles.heatmap}>
           <div className={styles.weekdays} aria-hidden="true">
@@ -65,9 +61,6 @@ export function ContributionHeatmap({
           </div>
         </div>
       </div>
-      <details className={styles.muted}><summary>如何阅读</summary><p>
-        颜色表示真实推进次数，不是金币数量；不要求连续打卡。
-      </p></details>
       {selected ? (
         <div className={styles.dayDetails}>
           <h3>{selected} 的推进</h3>

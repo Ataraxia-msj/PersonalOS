@@ -15,6 +15,14 @@ const data: AffairsFormData = {
   serverNowISO: "2026-10-03T00:00:00Z",
   taskHistory: [],
 };
+it('prefills calendar date and project together without submitting',()=>{
+ const action=vi.fn();
+ const project={id:'p',name:'Interview',status:'active'} as Extract<AffairsFormData,{resource:'task'}>['projects'][number];
+ render(<TaskForm data={{...data,projects:[project]}} mode="create" action={action} defaultProjectId="p" defaultDueDate="2026-10-08"/>);
+ expect(screen.getByLabelText('截止日期（可选）')).toHaveValue('2026-10-08');
+ expect(screen.getByLabelText('所属项目')).toHaveValue('p');
+ expect(action).not.toHaveBeenCalled();
+});
 it("submits structured schedule and clears time with its date",async()=>{
  const user=userEvent.setup(),seen:FormData[]=[];
  render(<TaskForm data={data} mode="create" action={async(_s,f)=>{seen.push(f);return {status:"error",message:"test rejection",fieldErrors:{},receipt:null};}}/>);
