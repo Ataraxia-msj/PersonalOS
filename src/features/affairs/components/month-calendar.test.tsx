@@ -13,6 +13,8 @@ it("renders true range endpoints and time, and only opens confirmation on comple
  expect(screen.getByText("10:30")).toBeVisible();
  expect(screen.getByRole("button",{name:"新增行动：2026-10-08"})).toHaveStyle({gridColumn:"4"});
  expect(screen.getByRole("button",{name:"查看日期：2026-10-08"})).toHaveStyle({gridColumn:"4"});
+ const day=screen.getByRole("button",{name:"查看日期：2026-10-08"});
+ expect(day.parentElement?.parentElement).toHaveStyle({gridTemplateRows:'32px repeat(1,24px) minmax(28px,auto)'});
  expect(screen.getAllByRole("button",{name:/查看项目：系统/})).toHaveLength(3);
  await userEvent.click(screen.getByRole("button",{name:"完成：准备面试材料"}));
  expect(screen.getByRole("dialog",{name:"确认行动完成"})).toBeVisible();

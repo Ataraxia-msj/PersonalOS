@@ -42,7 +42,8 @@ export function MonthCalendar({model,tasks,projects,balance,action,onCreateTask}
   <div className={styles.weekdayHeader} aria-hidden="true">{["一","二","三","四","五","六","日"].map(d=><span key={d}>{d}</span>)}</div>
   {model.weeks.map(week=>{
    const visible=week.segments.filter(s=>s.lane<3),laneCount=Math.max(0,...visible.map(s=>s.lane+1));
-   return <div key={week.startDate} className={styles.week} style={{"--lanes":laneCount,gridTemplateRows:`32px repeat(${laneCount},24px) minmax(52px,auto)`} as CSSProperties}>
+   const pointHeight=week.days.some(d=>d.items.length)||week.segments.some(s=>s.lane>=3)?28:0;
+   return <div key={week.startDate} className={styles.week} style={{"--lanes":laneCount,gridTemplateRows:`32px repeat(${laneCount},24px) minmax(${pointHeight}px,auto)`} as CSSProperties}>
     {week.days.map((d,col)=>{
      const hiddenRanges=week.segments.filter(s=>s.lane>=3&&col>=s.startColumn&&col<s.startColumn+s.span).length;
      const extra=Math.max(0,d.items.length-2)+hiddenRanges;

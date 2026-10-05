@@ -32,7 +32,7 @@ export function ProgressDashboard({data,action,initialLocation}:{data:AffairsDas
   window.history.pushState({...window.history.state},'',url.pathname+url.search+url.hash);setLocation(next);
  };
  const create=(date:string)=>{if(canLeaveAffairsForm(document.body))router.push('/affairs/tasks/new?dueDate='+date);};
- return <div ref={root}>
+ return <div ref={root} className={styles.workbench}>
   <WorkbenchSummary summary={summarizeWorkbench(data.tasks,data.projects,data.balance,data.serverNowISO)}/>
   <ContributionHeatmap rows={data.contributions} today={data.today} progress={data.progress}/>
   <div className={styles.calendarToolbar}>

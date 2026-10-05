@@ -21,12 +21,6 @@ export function buildMonthCalendar(projects:AffairsProject[],tasks:AffairsTask[]
  const gridEnd=last+(6-(new Date(last).getUTCDay()+6)%7)*dayMs;
  const ranges=items.filter(i=>i.startDate&&i.endDate&&stamp(i.startDate)<=gridEnd&&stamp(i.endDate)>=gridStart)
   .sort((a,b)=>compare(a.startDate!,b.startDate!)||compare(a.endDate!,b.endDate!)||compare(a.resource,b.resource)||compare(a.id,b.id));
- const laneEnds:number[]=[],lanes=new Map<string,number>();
- for(const item of ranges) {
-  const start=stamp(item.startDate!),end=stamp(item.endDate!);
-  let lane=laneEnds.findIndex(v=>v<start);if(lane===-1)lane=laneEnds.length;
-  laneEnds[lane]=end;lanes.set(item.key,lane);
- }
  const points=new Map<string,CalendarItem[]>();
  for(const item of items) if(!(item.startDate&&item.endDate)) {
   const date=item.endDate??item.startDate;
@@ -35,12 +29,16 @@ export function buildMonthCalendar(projects:AffairsProject[],tasks:AffairsTask[]
  const weeks:CalendarWeek[]=[];
  for(let start=gridStart;start<=gridEnd;start+=7*dayMs) {
   const end=start+6*dayMs;
+  const laneEnds:number[]=[];
   weeks.push({startDate:dateAt(start),days:Array.from({length:7},(_,n)=>{
    const date=dateAt(start+n*dayMs);
    return {date,inMonth:date.slice(0,7)===month,isToday:date===today,items:[...(points.get(date)??[])].sort(pointOrder)};
   }),segments:ranges.filter(i=>stamp(i.startDate!)<=end&&stamp(i.endDate!)>=start).map(item=>{
    const a=stamp(item.startDate!),b=stamp(item.endDate!);
-   return {item,startColumn:Math.round((Math.max(a,start)-start)/dayMs),span:Math.round((Math.min(b,end)-Math.max(a,start))/dayMs)+1,lane:lanes.get(item.key)!,continuesBefore:a<start,continuesAfter:b>end};
+   const clippedStart=Math.max(a,start),clippedEnd=Math.min(b,end);
+   let lane=laneEnds.findIndex(v=>v<clippedStart);if(lane===-1)lane=laneEnds.length;
+   laneEnds[lane]=clippedEnd;
+   return {item,startColumn:Math.round((clippedStart-start)/dayMs),span:Math.round((clippedEnd-clippedStart)/dayMs)+1,lane,continuesBefore:a<start,continuesAfter:b>end};
   })});
  }
  return {month,weeks,unscheduled:items.filter(i=>!i.startDate&&!i.endDate).sort(pointOrder)};

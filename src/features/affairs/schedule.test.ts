@@ -4,6 +4,12 @@ import type {AffairsProject,AffairsTask} from "./types";
 export const project=(overrides:Partial<AffairsProject>={}):AffairsProject=>({id:"p",name:"Project",status:"active",plannedStartDate:"2026-10-01",dueDate:"2026-10-12",plannedTime:null,...overrides} as AffairsProject);
 export const task=(overrides:Partial<AffairsTask>={}):AffairsTask=>({id:"t",title:"Interview",status:"todo",plannedStartDate:null,dueDate:"2026-10-08",plannedTime:"10:30",projectId:null,...overrides} as AffairsTask);
 describe("pure month calendar",()=>{
+ it('reclaims empty lanes in later weeks without changing deterministic ordering',()=>{
+  const ps=[project(),project({id:'q',plannedStartDate:'2026-10-05',dueDate:'2026-10-20'}),project({id:'r',plannedStartDate:'2026-10-05',dueDate:'2026-10-28'})];
+  const result=buildMonthCalendar(ps,[],'2026-10','2026-10-05');
+  expect(result.weeks[4].segments.map(s=>[s.item.id,s.lane])).toEqual([['r',0]]);
+  expect(result).toEqual(buildMonthCalendar([...ps].reverse(),[],'2026-10','2026-10-05'));
+ });
  it("covers whole Monday weeks without timezone shifting dates",()=>{
   const model=buildMonthCalendar([],[],"2026-10","2026-10-05");
   expect(model.weeks).toHaveLength(5);
