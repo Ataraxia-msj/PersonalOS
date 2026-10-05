@@ -14,6 +14,7 @@ it("archived projects preserve history and require restoring before edits", () =
       description: null,
       mainlineId: null,
       dueDate: null,
+      plannedStartDate: null, plannedTime: null,
       completedAt: null,
       name: "Archived",
       status: "archived",

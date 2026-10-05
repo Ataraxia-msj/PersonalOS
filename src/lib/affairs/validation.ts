@@ -6,6 +6,7 @@ import type {
 } from "./types";
 import {isInboxOperation} from './inbox-types';
 import {validateInboxCommand} from './inbox-validation';
+import {validateScheduleMetadata} from './schedule-validation';
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const maximumBigint = BigInt("9223372036854775807");
@@ -197,6 +198,12 @@ export function validateAffairsCommand(
         price_coins: integer("price_coins", 1, 1000000),
         is_active: bool("is_active", true),
       };
+    if (op.includes("project") || op.includes("task")) {
+      const payload=args.p_payload as {due_date:string|null;planned_start_date?:string|null;planned_time?:string|null};
+      if(data.has("planned_start_date")) payload.planned_start_date=date("planned_start_date");
+      if(data.has("planned_time")) payload.planned_time=raw("planned_time").trim()||null;
+      Object.assign(errors,validateScheduleMetadata(payload));
+    }
   } else
     switch (op) {
       case "set_affairs_mainline_status":

@@ -58,6 +58,7 @@ it("passes real task cancel/restore command history through the service and adap
     status: "todo",
     waiting_reason: null,
     due_date: null,
+    planned_start_date: null, planned_time: null,
     completed_at: null,
     ever_completed: false,
     completion_cycle: 0,

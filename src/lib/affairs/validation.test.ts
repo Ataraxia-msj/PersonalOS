@@ -15,6 +15,14 @@ const form = (operation: string, values: Record<string, string> = {}) => {
   return f;
 };
 describe("affairs input boundary", () => {
+  it("preserves legacy omitted keys but saves explicit schedule and rejects reverse ranges", () => {
+    const legacy = validateAffairsCommand(form("create_affairs_task", {title:"Interview"}),now);
+    expect(legacy.input?.args).toHaveProperty("p_payload");
+    expect((legacy.input?.args as {p_payload:object}).p_payload).not.toHaveProperty("planned_time");
+    expect(validateAffairsCommand(form("create_affairs_task", {title:"Interview",due_date:"2026-10-08",planned_start_date:"2026-10-01",planned_time:"10:30"}),now).input).toMatchObject({args:{p_payload:{planned_start_date:"2026-10-01",planned_time:"10:30"}}});
+    expect(validateAffairsCommand(form("create_affairs_task", {title:"Interview",due_date:"2026-10-08",planned_start_date:"2026-10-09"}),now).errors).toHaveProperty("planned_start_date");
+    expect(validateAffairsCommand(form("create_affairs_task", {title:"Interview",planned_start_date:"",planned_time:""}),now).input).toMatchObject({args:{p_payload:{planned_start_date:null,planned_time:null}}});
+  });
   it("counts Unicode code points and normalizes text", () => {
     const input = validateAffairsCommand(
       form("create_affairs_task", { title: " 😀".repeat(100).trim() }),

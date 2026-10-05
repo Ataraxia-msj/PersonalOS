@@ -18,7 +18,7 @@ export function validateInboxCommand(data:FormData):ValidationResult<InboxComman
  if(operation==='resolve_affairs_inbox_entry') {
   const target=raw('target');if(target!=='task'&&target!=='project') errors.target='请选择行动或项目';
   else {
-   const fields=target==='task'?['title','description','project_id','is_core','core_reason','completion_criteria','due_date']:['name','outcome','description','mainline_id','due_date'];
+   const fields=target==='task'?['title','description','project_id','is_core','core_reason','completion_criteria','due_date','planned_start_date','planned_time']:['name','outcome','description','mainline_id','due_date','planned_start_date','planned_time'];
    const metadata=new FormData();metadata.set('operation',`create_affairs_${target}`);metadata.set('requestId',String(args.p_request_id));
    for(const k of fields){allowed.add(k);for(const v of data.getAll(k)) metadata.append(k,v);}
    const parsed=validateAffairsCommand(metadata,new Date());Object.assign(errors,parsed.errors);

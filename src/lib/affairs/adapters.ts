@@ -1,6 +1,13 @@
 import type * as Row from "./types";
 import type * as Ui from "@/features/affairs/types";
 import { decimalInteger, safeInteger } from "./validation";
+import {normalizeScheduleTime,validateScheduleMetadata} from "./schedule-validation";
+function schedule(r: Row.ProjectRow|Row.TaskRow) {
+ if(r.planned_start_date===undefined||r.planned_time===undefined) throw new Error("missing_affairs_schedule_columns: deploy schedule migration");
+ const plannedTime=normalizeScheduleTime(r.planned_time);
+ if(Object.keys(validateScheduleMetadata({...r,planned_time:plannedTime})).length) throw new Error("invalid_affairs_schedule");
+ return {plannedStartDate:r.planned_start_date,plannedTime};
+}
 import type {InboxEntryRow,InboxResolveReceiptRow,InboxResolveReceipt} from './inbox-types';
 export function adaptInboxEntry(r:InboxEntryRow):Ui.AffairsInboxEntry {return {...camel<Ui.AffairsInboxEntry>(r),revision:revision(r)};}
 export function adaptInboxResolveReceipt(r:InboxResolveReceiptRow):InboxResolveReceipt {
@@ -47,6 +54,7 @@ export function adaptMainline(r: Row.MainlineRow): Ui.AffairsMainline {
 export function adaptTask(r: Row.TaskRow): Ui.AffairsTask {
   return {
     ...camel<Ui.AffairsTask>(r),
+    ...schedule(r),
     revision: revision(r),
     completionCycle: decimalInteger(r.completion_cycle),
   };
@@ -61,6 +69,7 @@ export function adaptProject(r: Row.ProjectProgressRow): Ui.AffairsProject {
     throw new Error("invalid_progress_rate");
   return {
     ...camel<Ui.AffairsProject>(r),
+    ...schedule(r),
     revision: revision(r),
     milestoneTotal: safeInteger(r.milestone_total),
     milestoneCompleted: safeInteger(r.milestone_completed),

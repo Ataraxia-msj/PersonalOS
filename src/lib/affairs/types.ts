@@ -21,6 +21,8 @@ export interface MainlineRow extends MutableRow {
   focus_project_id: string | null;
 }
 export interface ProjectRow extends MutableRow {
+  planned_start_date: string | null;
+  planned_time: string | null;
   mainline_id: string | null;
   name: string;
   outcome: string;
@@ -38,6 +40,8 @@ export interface MilestoneRow extends MutableRow {
   completed_at: string | null;
 }
 export interface TaskRow extends MutableRow {
+  planned_start_date: string | null;
+  planned_time: string | null;
   project_id: string | null;
   title: string;
   description: string | null;
@@ -172,6 +176,8 @@ export interface MainlineMetadata {
   sort_order: number;
 }
 export interface ProjectMetadata {
+  planned_start_date?: string | null;
+  planned_time?: string | null;
   name: string;
   outcome: string;
   description: string | null;
@@ -179,6 +185,8 @@ export interface ProjectMetadata {
   due_date: string | null;
 }
 export interface TaskMetadata {
+  planned_start_date?: string | null;
+  planned_time?: string | null;
   title: string;
   description: string | null;
   project_id: string | null;
