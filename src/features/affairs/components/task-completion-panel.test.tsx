@@ -13,6 +13,12 @@ const task = {
   completionCriteria: "Deliver",
   coreReason: "Goal",
 } as AffairsTask;
+it("offers an accessible checkbox-style trigger without prematurely submitting",async()=>{
+ const action=vi.fn();render(<TaskCompletionPanel task={task} currentBalance={0} action={action} triggerVariant="checkbox"/>);
+ await userEvent.click(screen.getByRole("button",{name:"完成：Core"}));
+ expect(screen.getByRole("dialog",{name:"确认行动完成"})).toBeVisible();
+ expect(action).not.toHaveBeenCalled();
+});
 it("only displays earned coin feedback after a confirmed non-replay success", async () => {
   const action = vi.fn(async () => ({
     status: "success" as const,

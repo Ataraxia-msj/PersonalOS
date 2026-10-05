@@ -1,0 +1,45 @@
+import {render,screen,waitFor} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import {it,expect,vi} from "vitest";
+import type {AffairsTask,AffairsProject} from "../types";
+import {buildMonthCalendar} from "../schedule";
+import {MonthCalendar} from "./month-calendar";
+vi.mock("next/navigation",()=>({useRouter:()=>({refresh:vi.fn()})}));
+const task={id:"t",revision:"1",title:"准备面试材料",status:"todo",isCore:false,plannedStartDate:null,dueDate:"2026-10-08",plannedTime:"10:30",projectId:null} as AffairsTask;
+const project={id:"p",revision:"1",name:"系统",status:"active",plannedStartDate:"2026-10-01",dueDate:"2026-10-12",plannedTime:null} as AffairsProject;
+it("renders true range endpoints and time, and only opens confirmation on completion click",async()=>{
+ const action=vi.fn(),create=vi.fn();
+ render(<MonthCalendar model={buildMonthCalendar([project],[task],"2026-10","2026-10-05")} tasks={[task]} projects={[project]} balance={0} action={action} onCreateTask={create}/>);
+ expect(screen.getByText("10:30")).toBeVisible();
+ expect(screen.getByRole("button",{name:"新增行动：2026-10-08"})).toHaveStyle({gridColumn:"4"});
+ expect(screen.getByRole("button",{name:"查看日期：2026-10-08"})).toHaveStyle({gridColumn:"4"});
+ expect(screen.getAllByRole("button",{name:/查看项目：系统/})).toHaveLength(3);
+ await userEvent.click(screen.getByRole("button",{name:"完成：准备面试材料"}));
+ expect(screen.getByRole("dialog",{name:"确认行动完成"})).toBeVisible();
+ expect(action).not.toHaveBeenCalled();
+});
+it("retains original completion snapshot and request through unknown response and props refresh",async()=>{
+ const seen:FormData[]=[];
+ const action=vi.fn(async(_s,f:FormData)=>{seen.push(f);return {status:"uncertain" as const,receipt:null,fieldErrors:{},message:"结果未知"};});
+ const view=render(<MonthCalendar model={buildMonthCalendar([],[task],"2026-10","2026-10-05")} tasks={[task]} projects={[]} balance={0} action={action} onCreateTask={vi.fn()}/>);
+ await userEvent.click(screen.getByRole("button",{name:"完成：准备面试材料"}));
+ await userEvent.click(screen.getByLabelText("确认已满足完成条件"));
+ await userEvent.click(screen.getByRole("button",{name:"确认完成行动"}));await screen.findByText("结果未知");
+ view.rerender(<MonthCalendar model={buildMonthCalendar([],[],"2026-10","2026-10-05")} tasks={[]} projects={[]} balance={1} action={action} onCreateTask={vi.fn()}/>);
+ await userEvent.click(screen.getByRole("button",{name:"关闭确认"}));
+ expect(screen.getByRole("dialog",{name:"确认行动完成"})).toBeVisible();
+ await userEvent.click(screen.getByRole("button",{name:"重试同一次提交"}));
+ await waitFor(()=>expect(seen).toHaveLength(2));
+ expect([...seen[1].entries()]).toEqual([...seen[0].entries()]);
+ expect(seen[1].get("revision")).toBe("1");
+});
+it("exposes overflow and unscheduled records without loss, and creates only after explicit click",async()=>{
+ const ts=Array.from({length:5},(_,n)=>({...task,id:"t"+n,title:"任务"+n,plannedTime:null}));
+ const unscheduled={...project,plannedStartDate:null,dueDate:null};
+ const create=vi.fn();
+ render(<MonthCalendar model={buildMonthCalendar([unscheduled],ts,"2026-10","2026-10-05")} tasks={ts} projects={[unscheduled]} balance={0} action={vi.fn()} onCreateTask={create}/>);
+ await userEvent.click(screen.getByRole("button",{name:/展开2026-10-08/}));
+ expect(screen.getByRole("region",{name:"2026-10-08 的安排"})).toHaveTextContent("任务4");
+ await userEvent.click(screen.getByText("未安排 · 1"));expect(screen.getByRole("button",{name:"查看项目：系统"})).toBeVisible();
+ await userEvent.click(screen.getByRole("button",{name:"新增行动：2026-10-06"}));expect(create).toHaveBeenCalledWith("2026-10-06");
+});

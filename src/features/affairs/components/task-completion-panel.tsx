@@ -4,23 +4,32 @@ import { IconCoin } from "@tabler/icons-react";
 import type { AffairsTask } from "../types";
 import type { AffairsActionState } from "@/lib/affairs/action-state";
 import { ActionForm, type AffairsAction } from "./action-form";
-import { ConfirmationPanel } from "./confirmation-panel";
+import { GuardedPanel } from "./guarded-panel";
+import {IconSquare} from "@tabler/icons-react";
 import styles from "./affairs.module.css";
 export function TaskCompletionPanel({
   task,
   currentBalance,
   action,
   onProtectionChange,
+  triggerVariant="default", initialMode=null, hideTrigger=false, onClose,
 }: {
   task: AffairsTask;
   currentBalance: number;
   action: AffairsAction;
   onProtectionChange?: (protectedForm: boolean) => void;
+  triggerVariant?: "default"|"checkbox";
+  initialMode?: "complete"|null;
+  hideTrigger?:boolean;
+  onClose?:()=>void;
 }) {
-  const [mode, setMode] = useState<"complete" | "reopen" | "undo" | null>(null);
+  const [mode, setMode] = useState<"complete" | "reopen" | "undo" | null>(initialMode);
+  const [snapshot,setSnapshot]=useState(task);
+  const current=mode?snapshot:task;
   const [feedback, setFeedback] = useState<AffairsActionState | null>(null);
   const choose = (next: "complete" | "reopen" | "undo") => {
     setFeedback(null);
+    setSnapshot(task);
     setMode(next);
   };
   const title =
@@ -31,7 +40,7 @@ export function TaskCompletionPanel({
         : "撤销误完成";
   return (
     <>
-      <div className={styles.rowActions}>
+      {!hideTrigger?<div className={styles.rowActions}>
         {task.status === "done" ? (
           <button
             type="button"
@@ -45,8 +54,9 @@ export function TaskCompletionPanel({
             type="button"
             className={styles.secondaryButton}
             onClick={() => choose("complete")}
+            aria-label={triggerVariant==="checkbox"?"完成："+task.title:undefined}
           >
-            确认完成
+            {triggerVariant==="checkbox"?<IconSquare size={17} aria-hidden="true"/>:"确认完成"}
           </button>
         ) : null}
         {task.everCompleted || task.status === "done" ? (
@@ -58,14 +68,14 @@ export function TaskCompletionPanel({
             撤销误完成
           </button>
         ) : null}
-      </div>
-      <ConfirmationPanel
+      </div>:null}
+      <GuardedPanel
         open={mode !== null}
         title={title}
-        onClose={() => setMode(null)}
+        onClose={() => {setMode(null);onClose?.();}}
       >
-        <h3>{task.title}</h3>
-        <p>{task.completionCriteria || "确认这件事已实际完成。"}</p>
+        <h3>{current.title}</h3>
+        <p>{current.completionCriteria || "确认这件事已实际完成。"}</p>
         <p className={styles.muted}>当前余额 {currentBalance} 金币</p>
         {mode === "reopen" ? (
           <p>保留已获得的奖励和完成贡献，再次完成不会重复发币。</p>
@@ -76,7 +86,7 @@ export function TaskCompletionPanel({
           </p>
         ) : (
           <p>
-            {task.isCore
+            {current.isCore
               ? "核心行动完成奖励固定 1 金币；已经领过的奖励不会重复发放。"
               : "普通事务完成不发金币，但留下真实完成贡献。"}
           </p>
@@ -92,12 +102,12 @@ export function TaskCompletionPanel({
                   ? "reopen_affairs_task"
                   : "undo_affairs_task_completion"
             }
-            identity={task}
+            identity={current}
             onState={setFeedback}
             onProtectionChange={onProtectionChange}
             submitLabel={
               mode === "complete"
-                ? task.isCore
+                ? current.isCore
                   ? "完成并领取 1 金币"
                   : "确认完成行动"
                 : mode === "reopen"
@@ -131,7 +141,7 @@ export function TaskCompletionPanel({
             <strong>已到账 +1 金币</strong>
           </div>
         ) : null}
-      </ConfirmationPanel>
+      </GuardedPanel>
     </>
   );
 }

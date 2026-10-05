@@ -1,0 +1,57 @@
+.calendar {min-width:0;}
+.weekdayHeader {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-block:1px solid var(--divider);color:var(--text-secondary);font-size:13px;}
+.weekdayHeader span {text-align:center;padding:10px;border-right:1px solid var(--divider);}
+.week {position:relative;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid var(--divider);padding-bottom:6px;min-height:106px;}
+.dayContents {display:contents;}
+.blankDay {grid-row:1 / -1;background:transparent;border:0;border-right:1px solid var(--divider);cursor:pointer;min-width:0;}
+.blankDay:hover {background:var(--surface);}
+.dayNumber {grid-row:1;z-index:1;justify-self:start;align-self:center;color:var(--text-primary);background:transparent;border:1px solid transparent;border-radius:20px;padding:4px 8px;margin-left:5px;cursor:pointer;font-size:12px;}
+.dayNumber[data-outside=true] {color:var(--text-tertiary);}
+.dayNumber[data-today=true] {border-color:var(--accent);color:var(--text-primary);}
+.dayNumber[aria-pressed=true] {background:var(--surface-hover);}
+.pointIndicator {display:none;}
+.points {z-index:1;align-self:start;min-width:0;display:grid;gap:3px;margin:4px 6px;}
+.segment {z-index:2;min-width:0;display:flex;align-items:center;margin:2px 5px;border-radius:4px;background:var(--accent);color:#181715;overflow:hidden;}
+.segment[data-tone="1"] {background:#b7a18b;}
+.segment[data-tone="2"] {background:#7e8668;color:#f7f3eb;}
+.segment[data-before=true] {border-top-left-radius:0;border-bottom-left-radius:0;}
+.segment[data-after=true] {border-top-right-radius:0;border-bottom-right-radius:0;}
+.rangeTitle {display:flex;align-items:center;justify-content:space-between;gap:6px;text-align:left;padding:2px 8px;font-size:12px;flex:1;min-width:0;cursor:pointer;background:transparent;border:0;color:inherit;}
+.rangeTitle span {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.entry {display:flex;align-items:center;gap:6px;min-width:0;min-height:23px;}
+.entry small {color:var(--text-secondary);font-size:12px;}
+.check {display:grid;place-items:center;flex-shrink:0;width:23px;height:23px;background:transparent;border:0;color:inherit;padding:0;cursor:pointer;}
+.itemTitle {display:flex;align-items:center;gap:6px;min-width:0;text-align:left;background:transparent;color:var(--text-primary);border:0;padding:2px 0;font-size:12px;cursor:pointer;}
+.itemTitle span {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.itemTitle svg {color:var(--accent);flex-shrink:0;}
+.itemTitle time {font-variant-numeric:tabular-nums;flex-shrink:0;}
+.more {justify-self:start;background:transparent;border:0;color:var(--text-secondary);cursor:pointer;font-size:12px;}
+.calendar button:focus-visible,.calendar summary:focus-visible,.editLink:focus-visible {outline:2px solid var(--accent);outline-offset:2px;}
+.unscheduled {border-bottom:1px solid var(--divider);padding:18px 0;}
+.unscheduled summary {cursor:pointer;color:var(--text-secondary);font-size:14px;margin-bottom:8px;}
+.unscheduled .entry {padding:6px 0;}
+.dayList {display:none;}
+.dayListExpanded {margin-top:18px;border-block:1px solid var(--divider);padding:14px 0;}
+.dayListExpanded header,.dayList header {display:flex;align-items:center;gap:14px;justify-content:space-between;}
+.dayListExpanded h3,.dayList h3 {font-size:15px;}
+.dayListExpanded header button,.dayList header button {background:transparent;border:0;color:var(--accent);cursor:pointer;font-size:13px;}
+.dayListExpanded .entry,.dayList .entry {padding:8px 0;border-bottom:1px solid var(--divider);}
+.dayListExpanded .itemTitle,.dayList .itemTitle {font-size:14px;}
+.dayListExpanded .itemTitle span,.dayList .itemTitle span {white-space:normal;overflow-wrap:anywhere;}
+.detailFields {display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px 20px;font-size:14px;margin:18px 0 24px;}
+.detailFields dt {color:var(--text-secondary);}
+.detailFields dd {margin:0;overflow-wrap:anywhere;}
+.editLink {display:inline-block;color:var(--accent);margin-bottom:18px;}
+@media(max-width:600px) {
+ .week {grid-template-rows:36px repeat(3,4px)!important;min-height:48px;padding-bottom:3px;}
+ .blankDay {pointer-events:none;}
+ .dayNumber {justify-self:center;margin:0;padding:6px;font-size:12px;}
+ .weekdayHeader span {padding:8px 0;}
+ .points {display:none;}
+ .segment {align-self:center;height:3px;margin-inline:2px;pointer-events:none;}
+ .pointIndicator {display:block;margin:1px auto 0;color:var(--accent);}
+ .rangeTitle,.segment .check {display:none;}
+ .dayList,.dayListExpanded {display:block;margin-top:20px;padding-bottom:14px;}
+ .entry small {margin-left:auto;max-width:35%;overflow-wrap:anywhere;}
+ .unscheduled .itemTitle {font-size:14px;}
+}
