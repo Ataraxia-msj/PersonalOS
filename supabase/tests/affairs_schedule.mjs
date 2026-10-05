@@ -23,6 +23,10 @@ const snapshot = async () => ({
 try {
   for (const p of ['./fixtures/transfer_base.sql','./fixtures/affairs_base.sql','../migrations/202610030005_affairs_foundation.sql','../migrations/202610030006_affairs_rewards.sql','../migrations/202610040001_affairs_inbox.sql']) await db.exec(await file(p));
   const before = await snapshot();
+  const preflight=await one(await file('../checks/affairs_schedule_preflight.sql'));
+  assert.ok(preflight.report?.columns?.length,'preflight returns one exportable report with all sections');
+  assert.equal(preflight.report.functions.length,3);
+  assert.ok(preflight.report.policies.length);
   const columns = await rows("select column_name,data_type from information_schema.columns where table_schema='public' and table_name='vw_affairs_project_progress' order by ordinal_position");
   await login();
   const oldCommands = [];
@@ -42,6 +46,9 @@ try {
   assert.deepEqual(newColumns.slice(0,-2),columns,'old View column order/types preserved');
   assert.deepEqual(newColumns.slice(-2),[{column_name:'planned_start_date',data_type:'date'},{column_name:'planned_time',data_type:'time without time zone'}]);
   assert.deepEqual(await snapshot(),before,'Finance, public RPC, RLS and grants unchanged');
+  const postflight=await one(await file('../checks/affairs_schedule_postflight.sql'));
+  assert.equal(postflight.report.columns.length,6);
+  assert.ok(postflight.report.invalid_rows.every(r=>r.invalid_rows===0));
   await login();
   for (const c of oldCommands) {
     const replay = await create(c.kind,c.payload,c.request);

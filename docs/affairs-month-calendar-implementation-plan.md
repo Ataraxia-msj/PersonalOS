@@ -1,6 +1,6 @@
 # Affairs Month Calendar Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 推荐当前代理在本会话原生顺序执行；用户已指定直接在 develop 开发，不创建 worktree。未经执行方式确认，不启用逐任务子代理。
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking. 推荐当前代理在本会话原生顺序执行；用户已指定直接在 develop 开发，不创建 worktree。未经执行方式确认，不启用逐任务子代理。
 
 **Goal:** 按选定第一张参考图，在真实事务工作台增加融合项目跨度、TODO 和零散事件的纯月历。
 
@@ -58,11 +58,11 @@
 - Consumes: `affairs_private.metadata(text,jsonb)`、`foundation(text,uuid,jsonb)`、`resolve_inbox(uuid,jsonb)` 及现有公共 RPC，不改变签名。
 - Produces: 两张表的 `planned_start_date date null`、`planned_time time without time zone null`；项目 View 尾部新增同名两列，原列顺序/类型不变。
 
-- [ ] **Step 1: 写隔离 SQL 失败测试。** 复用现有 fixtures 和 PGlite，加载 foundation/rewards/inbox；升级前创建项目、行动、收集整理命令并保存 UUID/payload/回执。断言升级后旧命令 replay 保持相同对象/结果且无额外奖励，新创建/编辑/整理保存时间，两端日期与钟点约束拒绝非法写入。断言旧更新保留新字段、清空 due_date 同时清空时间、旧更新制造反向范围必须失败。记录升级前后 View 列顺序、权限、Finance 数据/定义和命令总数。
-- [ ] **Step 2: 运行 RED。** `node supabase/tests/affairs_schedule.mjs .affairs-test-runtime/node_modules/@electric-sql/pglite/dist/index.js --red`。预期明确因新字段不存在失败；脚本 RED 模式不读取尚不存在 migration，不应以模块路径错误失败。
-- [ ] **Step 3: 编写单事务增量 SQL。** 追加 nullable 列和有效状态约束；按实际现有定义替换三个私有函数的相关分支，保留不相关分支与锁/replay 顺序。metadata 只有输入实际存在新键时才输出新键。旧更新缺省保留新列，新 null 清空；对更新最终状态校验。View 显式列出旧字段和原三个进度字段，最后追加新列；不 drop/recreate 依赖 View。preflight 输出相关字段/约束/函数定义/列顺序/权限供只读核对，migration 的结构检查发现冲突就中止，不吞异常或强制覆盖。
-- [ ] **Step 4: 运行 GREEN 与旧 SQL 回归。** 去掉 `--red` 运行上面脚本，预期所有断言通过；分别运行现有 `affairs_foundation.mjs`、`affairs_rewards.mjs`、`affairs_inbox.mjs`。新脚本额外以升级后的环境核验相同老入口行为、cross-owner/anon 拒绝、无直接表写入、失败原子回滚、旧命令对象后来改变仍能 replay。PGlite 不代表双会话并发验收，报告中明确这一限制。
-- [ ] **Step 5: 运行 `npm run test`，只提交新增 SQL/测试。** 提交信息 `feat: add compatible affairs schedule fields`。不连接正式库。
+- [x] **Step 1: 写隔离 SQL 失败测试。** 复用现有 fixtures 和 PGlite，加载 foundation/rewards/inbox；升级前创建项目、行动、收集整理命令并保存 UUID/payload/回执。断言升级后旧命令 replay 保持相同对象/结果且无额外奖励，新创建/编辑/整理保存时间，两端日期与钟点约束拒绝非法写入。断言旧更新保留新字段、清空 due_date 同时清空时间、旧更新制造反向范围必须失败。记录升级前后 View 列顺序、权限、Finance 数据/定义和命令总数。
+- [x] **Step 2: 运行 RED。** `node supabase/tests/affairs_schedule.mjs .affairs-test-runtime/node_modules/@electric-sql/pglite/dist/index.js --red`。预期明确因新字段不存在失败；脚本 RED 模式不读取尚不存在 migration，不应以模块路径错误失败。
+- [x] **Step 3: 编写单事务增量 SQL。** 追加 nullable 列和有效状态约束；按实际现有定义替换三个私有函数的相关分支，保留不相关分支与锁/replay 顺序。metadata 只有输入实际存在新键时才输出新键。旧更新缺省保留新列，新 null 清空；对更新最终状态校验。View 显式列出旧字段和原三个进度字段，最后追加新列；不 drop/recreate 依赖 View。preflight 输出相关字段/约束/函数定义/列顺序/权限供只读核对，migration 的结构检查发现冲突就中止，不吞异常或强制覆盖。
+- [x] **Step 4: 运行 GREEN 与旧 SQL 回归。** 去掉 `--red` 运行上面脚本，预期所有断言通过；分别运行现有 `affairs_foundation.mjs`、`affairs_rewards.mjs`、`affairs_inbox.mjs`。新脚本额外以升级后的环境核验相同老入口行为、cross-owner/anon 拒绝、无直接表写入、失败原子回滚、旧命令对象后来改变仍能 replay。PGlite 不代表双会话并发验收，报告中明确这一限制。
+- [x] **Step 5: 运行 `npm run test`，只提交新增 SQL/测试。** 提交信息 `feat: add compatible affairs schedule fields`。不连接正式库。
 
 ### Task 2: Typed 排期、校验与真实字段映射
 
@@ -78,11 +78,11 @@
 - Produces: `validateScheduleMetadata(input: {due_date:string|null; planned_start_date?:string|null; planned_time?:string|null}): Record<string,string>`；`normalizeScheduleTime(value:unknown):string|null`。独立纯模块，不导入 mutations/service，不引入 validation/inbox 的循环依赖。
 - Consumes: Task 1 新字段和 SQL 接受规则；现有 `ValidationResult<T>`、adapter revision/cycle 映射。
 
-- [ ] **Step 1: 写失败测试。** `normalizeScheduleTime('10:30:00')` 得到 `'10:30'`，`null` 保留，`'10:30:01'`/undefined/非法值报错。validate 对开始晚于结束、无日期时间、24:00/秒字符串返回字段错误，00:00/23:59、单端点和未来排期通过。旧 FormData 没有新键时 output payload 也不能有新键；显式空值输出 null。
-- [ ] **Step 2: 运行 RED。** `npm run test -- src/lib/affairs/schedule-validation.test.ts src/lib/affairs/validation.test.ts src/lib/affairs/inbox-validation.test.ts src/lib/affairs/adapters.test.ts`。预期新能力缺失导致失败。
-- [ ] **Step 3: 实现类型和校验。** FormData 以 `has()` 保留 omission 与 null 的区别，规范 metadata 只附加实际提供的键；四个录入调用共用校验。adapter 要求部署后的 row 提供新字段并校验，不将缺列错误伪装为 null。UI camel 类型与 Database View 列同步。只为测试 fixture 添加真实语义 null，不改业务结果断言。
-- [ ] **Step 4: 运行上述 GREEN、`npm run typecheck` 和 `npm run test`。** service 回归须证明字段正确输出，查询仍并发/分页，没有为了月历再读一次项目或行动。
-- [ ] **Step 5: 提交相关文件。** `feat: map and validate affairs schedule metadata`。
+- [x] **Step 1: 写失败测试。** `normalizeScheduleTime('10:30:00')` 得到 `'10:30'`，`null` 保留，`'10:30:01'`/undefined/非法值报错。validate 对开始晚于结束、无日期时间、24:00/秒字符串返回字段错误，00:00/23:59、单端点和未来排期通过。旧 FormData 没有新键时 output payload 也不能有新键；显式空值输出 null。
+- [x] **Step 2: 运行 RED。** `npm run test -- src/lib/affairs/schedule-validation.test.ts src/lib/affairs/validation.test.ts src/lib/affairs/inbox-validation.test.ts src/lib/affairs/adapters.test.ts`。预期新能力缺失导致失败。
+- [x] **Step 3: 实现类型和校验。** FormData 以 `has()` 保留 omission 与 null 的区别，规范 metadata 只附加实际提供的键；四个录入调用共用校验。adapter 要求部署后的 row 提供新字段并校验，不将缺列错误伪装为 null。UI camel 类型与 Database View 列同步。只为测试 fixture 添加真实语义 null，不改业务结果断言。
+- [x] **Step 4: 运行上述 GREEN、`npm run typecheck` 和 `npm run test`。** service 回归须证明字段正确输出，查询仍并发/分页，没有为了月历再读一次项目或行动。
+- [x] **Step 5: 提交相关文件。** `feat: map and validate affairs schedule metadata`。
 
 ### Task 3: 所有录入入口保存结构化排期
 
@@ -97,11 +97,11 @@
 - Produces: 新创建/编辑 FormData 显式包含 `planned_start_date`、`due_date`、`planned_time`；UI label 为“开始日期（可选）”“截止日期（可选）”“时间（可选）”。
 - Produces: 新 model/draft 的 `plannedStartDate:string|null`；旧 model/draft 缺省新字段仍接受为未设置，新确认 payload 显式提供新字段。旧确认 DTO 保持 omission，不以默认值改造 frozen 请求。
 
-- [ ] **Step 1: 写失败测试。** 手动、统一新增、收集整理、Agent 四入口都能送出 `2026-10-08`/`10:30` 和开始日期；清空 dueDate 同时清空时间，非法范围不能提交。Agent 首次生成的新内容含结构化时间，主线/收集类型拒绝排期；原始旧 frozen payload 重试保持 byte-equivalent 键集合和同一个 requestId。旧说明不被解析为新时间。
-- [ ] **Step 2: 运行这些测试的 RED。** `npm run test -- src/features/affairs/components/forms.test.tsx src/features/affairs/components/quick-add.test.tsx src/features/affairs/components/inbox-workspace.test.tsx src/lib/agent/affairs src/features/agent/affairs-queue.test.ts src/features/agent/affairs-preview-card.test.tsx src/app/agent-affairs-actions.test.ts`。
-- [ ] **Step 3: 实现共用日期字段和 Agent 字段链路。** 时间输入 `type=time`、`step=60`；只针对计划日期允许未来，不改实际进展 occurred_at 规则。字段空值由 Task 2 校验处理。新字段从 AI schema→draft→预览编辑→confirmation→RPC，同步 strict key 白名单允许新旧 DTO；旧模式只补 UI 展示，不覆盖 frozen serialized request。未明确年份的开始/截止日期需要确认，不能凭空推算日期。
-- [ ] **Step 4: 上述 GREEN、`npm run typecheck`、`npm run test`。** 明确验证新时间是 column 数据，不仅写进 description；旧 unknown 重试未改变键集合。
-- [ ] **Step 5: 提交相关文件。** `feat: save schedule fields across affairs entry flows`。
+- [x] **Step 1: 写失败测试。** 手动、统一新增、收集整理、Agent 四入口都能送出 `2026-10-08`/`10:30` 和开始日期；清空 dueDate 同时清空时间，非法范围不能提交。Agent 首次生成的新内容含结构化时间，主线/收集类型拒绝排期；原始旧 frozen payload 重试保持 byte-equivalent 键集合和同一个 requestId。旧说明不被解析为新时间。
+- [x] **Step 2: 运行这些测试的 RED。** `npm run test -- src/features/affairs/components/forms.test.tsx src/features/affairs/components/quick-add.test.tsx src/features/affairs/components/inbox-workspace.test.tsx src/lib/agent/affairs src/features/agent/affairs-queue.test.ts src/features/agent/affairs-preview-card.test.tsx src/app/agent-affairs-actions.test.ts`。
+- [x] **Step 3: 实现共用日期字段和 Agent 字段链路。** 时间输入 `type=time`、`step=60`；只针对计划日期允许未来，不改实际进展 occurred_at 规则。字段空值由 Task 2 校验处理。新字段从 AI schema→draft→预览编辑→confirmation→RPC，同步 strict key 白名单允许新旧 DTO；旧模式只补 UI 展示，不覆盖 frozen serialized request。未明确年份的开始/截止日期需要确认，不能凭空推算日期。
+- [x] **Step 4: 上述 GREEN、`npm run typecheck`、`npm run test`。** 明确验证新时间是 column 数据，不仅写进 description；旧 unknown 重试未改变键集合。
+- [x] **Step 5: 提交相关文件。** `feat: save schedule fields across affairs entry flows`。
 
 ### Task 4: 纯月份网格与范围片段
 
@@ -116,11 +116,11 @@
 - Produces `buildMonthCalendar(projects:AffairsProject[],tasks:AffairsTask[],month:string,today:string):MonthCalendarModel`。
 - Produces `CalendarLocation = {view:'list'|'calendar';month:string}`；`parseCalendarLocation(params:URLSearchParams,today:string):CalendarLocation`、`shiftCalendarMonth(month:string,delta:-1|1):string`。仅日期运算，不访问 window、Supabase 或系统当前时间。
 
-- [ ] **Step 1: 写失败测试。** 2026-10 有 5 周，首日 2026-09-28、末日 2026-11-01；2021-02 有 4 周；2026-03 有 6 周。Oct1–12 项目切为 4/7/1 天，最后片段只能占 Oct12 一格；同日范围一格、跨年闰日正确。单端点点位、全空未安排、父子日期不相互补全；done/cancelled/archived 隐藏、paused/waiting 可见。无日期则不给 time 默认值。
-- [ ] **Step 2: 运行 RED。** `npm run test -- src/features/affairs/schedule.test.ts src/features/affairs/calendar-location.test.ts`。
-- [ ] **Step 3: 实现 UTC date-only 运算与稳定轨道。** 日期使用固定日历值，today 由 service 的上海值传入。按开始、结束、resource、ID 稳定排序，每周选择第一个无冲突轨道；跨月裁剪仍保留真实完整范围。point items 含钟点者按时间排序，然后类型/名称/ID。未知 location 值回 list/上海当月；导航限制 1000–9999 年，对超出支持范围月份拒绝导航，不能溢出成非法 URL。
-- [ ] **Step 4: 运行 GREEN 与全量回归。** 增加同 UUID 不同 resource、倒序输入、碰邻范围、三个长条及大量同日事项的轨道断言；模拟非上海 TZ 结果不变，月份边界、畸形/重复 URL 参数安全降级。
-- [ ] **Step 5: 提交新纯函数与测试。** `feat: project affairs data into a month calendar`。
+- [x] **Step 1: 写失败测试。** 2026-10 有 5 周，首日 2026-09-28、末日 2026-11-01；2021-02 有 4 周；2026-03 有 6 周。Oct1–12 项目切为 4/7/1 天，最后片段只能占 Oct12 一格；同日范围一格、跨年闰日正确。单端点点位、全空未安排、父子日期不相互补全；done/cancelled/archived 隐藏、paused/waiting 可见。无日期则不给 time 默认值。
+- [x] **Step 2: 运行 RED。** `npm run test -- src/features/affairs/schedule.test.ts src/features/affairs/calendar-location.test.ts`。
+- [x] **Step 3: 实现 UTC date-only 运算与稳定轨道。** 日期使用固定日历值，today 由 service 的上海值传入。按开始、结束、resource、ID 稳定排序，每周选择第一个无冲突轨道；跨月裁剪仍保留真实完整范围。point items 含钟点者按时间排序，然后类型/名称/ID。未知 location 值回 list/上海当月；导航限制 1000–9999 年，对超出支持范围月份拒绝导航，不能溢出成非法 URL。
+- [x] **Step 4: 运行 GREEN 与全量回归。** 增加同 UUID 不同 resource、倒序输入、碰邻范围、三个长条及大量同日事项的轨道断言；模拟非上海 TZ 结果不变，月份边界、畸形/重复 URL 参数安全降级。
+- [x] **Step 5: 提交新纯函数与测试。** `feat: project affairs data into a month calendar`。
 
 ### Task 5: 可读月历、详情与真实完成入口
 
@@ -136,11 +136,11 @@
 - Produces `CalendarItemDetails({item,task,project,balance,action,onClose}: {item:CalendarItem;task:AffairsTask|null;project:AffairsProject|null;balance:number;action:AffairsAction;onClose:()=>void})`。
 - 可给 TaskCompletionPanel 增加 `triggerVariant?:'default'|'checkbox'`，缺省保持现有按钮；不能更换完成 RPC、自动提交或产生 checked 乐观状态。
 
-- [ ] **Step 1: 写失败测试。** 月历无主线/周/甘特元素，range CSS grid 的列/span 对应 pure model；点位显示真实 `10:30`，无 time 不显示午夜。复选入口先打开现有完成确认，未确认不调 action；成功只用 receipt 后 refresh，未知时原 UUID 重试。详情有项目链接无主线，不修改事务类型。溢出 `+N` 可读全量当天列表，未安排可进入编辑。
-- [ ] **Step 2: 运行 RED。** `npm run test -- src/features/affairs/components/month-calendar.test.tsx src/features/affairs/components/calendar-item-details.test.tsx src/features/affairs/components/task-completion-panel.test.tsx`。
-- [ ] **Step 3: 实现月历与受保护详情。** 以单个 CSS grid 叠放项目轨道和 day cells，非嵌套卡片；范围条对齐完整周、色彩按项目/资源稳定选择，不按主线组织。无 checkbox 嵌套 button。详情选择时保存对象快照并持续挂载完成面板，不能在刷新后从已过滤的月历模型找不到对象就卸载。TaskCompletionPanel 的关闭使用现有 guard，busy/uncertain 不可关闭；显示真实 receipt 后用户可正常关闭。
-- [ ] **Step 4: 运行 GREEN 与 `npm run test`。** 模拟执行中 props 刷新使记录消失、revision 改变、网络未知后再成功，不丢冻结请求；重复点击不重复提交。移动端七列日期选择与所选日列表、全部片段键盘可达，当前选择离开月份后安全清除或保持受保护面板，不显示错误日期的详情。
-- [ ] **Step 5: 提交组件/样式/测试。** `feat: add actionable affairs month calendar`。
+- [x] **Step 1: 写失败测试。** 月历无主线/周/甘特元素，range CSS grid 的列/span 对应 pure model；点位显示真实 `10:30`，无 time 不显示午夜。复选入口先打开现有完成确认，未确认不调 action；成功只用 receipt 后 refresh，未知时原 UUID 重试。详情有项目链接无主线，不修改事务类型。溢出 `+N` 可读全量当天列表，未安排可进入编辑。
+- [x] **Step 2: 运行 RED。** `npm run test -- src/features/affairs/components/month-calendar.test.tsx src/features/affairs/components/calendar-item-details.test.tsx src/features/affairs/components/task-completion-panel.test.tsx`。
+- [x] **Step 3: 实现月历与受保护详情。** 以单个 CSS grid 叠放项目轨道和 day cells，非嵌套卡片；范围条对齐完整周、色彩按项目/资源稳定选择，不按主线组织。无 checkbox 嵌套 button。详情选择时保存对象快照并持续挂载完成面板，不能在刷新后从已过滤的月历模型找不到对象就卸载。TaskCompletionPanel 的关闭使用现有 guard，busy/uncertain 不可关闭；显示真实 receipt 后用户可正常关闭。
+- [x] **Step 4: 运行 GREEN 与 `npm run test`。** 模拟执行中 props 刷新使记录消失、revision 改变、网络未知后再成功，不丢冻结请求；重复点击不重复提交。移动端七列日期选择与所选日列表、全部片段键盘可达，当前选择离开月份后安全清除或保持受保护面板，不显示错误日期的详情。
+- [x] **Step 5: 提交组件/样式/测试。** `feat: add actionable affairs month calendar`。
 
 ### Task 6: 工作台视图、URL、空日新增及热力图
 
@@ -157,11 +157,11 @@
 - Produces: `ProgressDashboard` 增加 `initialLocation?:CalendarLocation`，缺省 list + data.today 月份；保留原清单 scope/history 状态，calendar 不应用隐藏主线 scope。
 - Produces: `creationDate(value:string|undefined):{date:string|null;error:string|null}` 在 `context.ts`；TaskForm 可选 `defaultDueDate?:string|null`。空日 `onCreateTask(date)` 跳到 `/affairs/tasks/new?dueDate=YYYY-MM-DD`，校验后预填，绝不自动保存。
 
-- [ ] **Step 1: 写失败测试。** 删除三个热力图文案但按钮 accessible label/当天点击保留；默认清单、calendar URL、月切换/今天/前后退正确；calendar 不含 mainline 名称及清单范围控制。invalid query 安全默认。点击空日只导航预填 dueDate，未提交前无 action。既有 projectId 预填与日期预填同时保留。
-- [ ] **Step 2: 运行 RED。** `npm run test -- src/features/affairs/components/progress-dashboard.test.tsx src/features/affairs/components/contribution-heatmap.test.tsx src/features/affairs/components/navigation-guard.test.tsx src/app/affairs/page.test.tsx src/lib/affairs/context.test.ts src/features/affairs/components/forms.test.tsx`。
-- [ ] **Step 3: 接入现有页面。** Server Page 接受 App Router Promise searchParams，原 service 只调用一次并传上海 today/已校验 location。客户端基于已有 data 投影；月份及 view 用同页 URL 状态同步，不为切月重新读 View，可使用 Next 支持的同页 history integration 并保留原 history state。复用 layout 中既有 AffairsNavigationGuard，任何新按钮操作先执行 `canLeaveAffairsForm(root)`，对 pending/unknown 禁止切换，dirty 拒绝时保持原 URL。
-- [ ] **Step 4: 运行 GREEN、`npm run typecheck`、`npm run test`。** 特别测试清单表单与日历表单的前/后退守卫、快速多次月份切换、成功 refresh 后详情保留；确认月份变更不增加 service/query calls。热力图压缩但点击目标与移动横向容器可用，不让整页溢出。
-- [ ] **Step 5: 提交集成改动。** `feat: integrate month calendar into affairs workbench`。
+- [x] **Step 1: 写失败测试。** 删除三个热力图文案但按钮 accessible label/当天点击保留；默认清单、calendar URL、月切换/今天/前后退正确；calendar 不含 mainline 名称及清单范围控制。invalid query 安全默认。点击空日只导航预填 dueDate，未提交前无 action。既有 projectId 预填与日期预填同时保留。
+- [x] **Step 2: 运行 RED。** `npm run test -- src/features/affairs/components/progress-dashboard.test.tsx src/features/affairs/components/contribution-heatmap.test.tsx src/features/affairs/components/navigation-guard.test.tsx src/app/affairs/page.test.tsx src/lib/affairs/context.test.ts src/features/affairs/components/forms.test.tsx`。
+- [x] **Step 3: 接入现有页面。** Server Page 接受 App Router Promise searchParams，原 service 只调用一次并传上海 today/已校验 location。客户端基于已有 data 投影；月份及 view 用同页 URL 状态同步，不为切月重新读 View，可使用 Next 支持的同页 history integration 并保留原 history state。复用 layout 中既有 AffairsNavigationGuard，任何新按钮操作先执行 `canLeaveAffairsForm(root)`，对 pending/unknown 禁止切换，dirty 拒绝时保持原 URL。
+- [x] **Step 4: 运行 GREEN、`npm run typecheck`、`npm run test`。** 特别测试清单表单与日历表单的前/后退守卫、快速多次月份切换、成功 refresh 后详情保留；确认月份变更不增加 service/query calls。热力图压缩但点击目标与移动横向容器可用，不让整页溢出。
+- [x] **Step 5: 提交集成改动。** `feat: integrate month calendar into affairs workbench`。
 
 ### Task 7: 完整验证与正式库交接
 
@@ -174,10 +174,10 @@
 - Consumes: Tasks 1–6 的 migration、checks、测试及真实 UI；不产生额外产品接口。
 - Produces: 用户操作顺序、实际测试/构建/视觉证据、尚未完成的正式库核对清单。
 
-- [ ] **Step 1: 完整验证。** `npm run test`、`npm run typecheck`、`npm run lint`、`npm run build`。记录命令、结果及现有失败，不只跑新测试。隔离 SQL 重跑 Task 1 四个脚本。不能将 PGlite 标记为正式库测试或并发 session 测试。
-- [ ] **Step 2: 浏览器视觉与交互检查。** 使用可用 Browser 工具；对照选定图在约 1440×1024、768、390 宽度验证月网格/条/字体/溢出/未安排/详情/键盘。浏览器写入只能作用于本地 fixture；若仅能连接正式库，则只读检查并明确新字段未部署的限制，不用 mock 服务掩盖。不登录/读取用户密码，缺 session 让用户自行登录。
+- [x] **Step 1: 完整验证。** `npm run test`、`npm run typecheck`、`npm run lint`、`npm run build`。记录命令、结果及现有失败，不只跑新测试。隔离 SQL 重跑 Task 1 四个脚本。不能将 PGlite 标记为正式库测试或并发 session 测试。
+- [x] **Step 2: 浏览器视觉与交互检查。** 使用可用 Browser 工具；对照选定图在约 1440×1024、768、390 宽度验证月网格/条/字体/溢出/未安排/详情/键盘。浏览器写入只能作用于本地 fixture；若仅能连接正式库，则只读检查并明确新字段未部署的限制，不用 mock 服务掩盖。不登录/读取用户密码，缺 session 让用户自行登录。
 - [ ] **Step 3: 单次完整代码审查和修复。** 执行流程允许时由独立 reviewer 检查整体 diff，重点按 Review Focus；Important/Critical 一次 TDD 修复，所有未修复项准确记录，不能在最终报告隐去。审查不授权数据库、远程推送或新增功能。
-- [ ] **Step 4: 写操作说明。** 用户先运行只读 preflight，提交实际字段/函数/View/权限结果；差异先报告。确认无冲突后由用户执行 migration，再运行只读 postflight。解释旧备注钟点须编辑一次，如何设置开始/截止/时间、如何完成 TODO、未安排入口以及默认隐藏完成事项。不得在 SQL Editor 混放自动测试写入。
+- [x] **Step 4: 写操作说明。** 用户先运行只读 preflight，提交实际字段/函数/View/权限结果；差异先报告。确认无冲突后由用户执行 migration，再运行只读 postflight。解释旧备注钟点须编辑一次，如何设置开始/截止/时间、如何完成 TODO、未安排入口以及默认隐藏完成事项。不得在 SQL Editor 混放自动测试写入。
 - [ ] **Step 5: 提交说明和验证记录，交付后停止。** 未经后续授权不合并 main、不推送、不发布 Vercel。若数据库尚未部署，明确“本地实现及测试完成，正式库接入待确认”，不能宣称生产可用。
 
 ## 计划自查与执行交接
