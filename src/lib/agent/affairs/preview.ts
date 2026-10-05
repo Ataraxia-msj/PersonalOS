@@ -1,4 +1,5 @@
 import {validDate} from '@/lib/affairs/validation';
+import {validateScheduleMetadata} from '@/lib/affairs/schedule-validation';
 import type {AffairsAgentOptions,AffairsDraft,AffairsConfirmation} from './types';
 
 export const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -25,9 +26,10 @@ export function validateAffairsDrafts(input:AffairsDraft[], options:AffairsAgent
   if(length(item.description)>10000) issue(item,'说明不能超过 10000 字');
   if(item.type==='project'&&(length(item.outcome)<1||length(item.outcome)>2000)) issue(item,'请填写项目成果（1–2000 字）');
   if(item.dueDate&&!validDate(item.dueDate)) issue(item,'计划日期无效');
-  if((item.type==='mainline'||item.type==='capture')&&(item.dueDate||item.plannedTime))issue(item,'此类型不支持计划日期，请清除或更换类型');
+  if((item.type==='mainline'||item.type==='capture')&&(item.dueDate||item.plannedTime||item.plannedStartDate))issue(item,'此类型不支持计划日期，请清除或更换类型');
+  for(const text of Object.values(validateScheduleMetadata({due_date:item.dueDate,planned_start_date:item.plannedStartDate,planned_time:item.plannedTime}))) issue(item,text);
   if(item.plannedTime&&(!item.dueDate||!/^([01]\d|2[0-3]):[0-5]\d$/.test(item.plannedTime))) issue(item,'计划时间需要有效日期和 HH:mm');
-  if(item.dueDate&&item.yearInferred&&!item.dateConfirmed) issue(item,'请确认推断的年份');
+  if((item.dueDate||item.plannedStartDate)&&item.yearInferred&&!item.dateConfirmed) issue(item,'请确认推断的年份');
   if(item.type==='task'&&item.isCore&&(length(item.coreReason)<1||length(item.coreReason)>2000||length(item.completionCriteria)<1||length(item.completionCriteria)>2000)) issue(item,'核心行动需要目标及完成条件（各 1–2000 字）');
   if(item.parentId&&item.parentDraftId) issue(item,'父级引用冲突');
   const expected=item.type==='project'?'mainline':item.type==='task'?'project':null;
@@ -68,8 +70,8 @@ export function toAffairsConfirmation(draft:AffairsDraft,resolvedParentId:string
  if([...description].length>10000)throw new Error('description_too_long');
  switch(draft.type){
   case 'mainline':return {kind:'mainline',requestId:draft.requestId,payload:{name:draft.name?.trim()??'',description,sort_order:0}};
-  case 'project':return {kind:'project',requestId:draft.requestId,payload:{name:draft.name?.trim()??'',description,outcome:draft.outcome?.trim()??'',mainline_id:parent,due_date:draft.dueDate}};
-  case 'task':return {kind:'task',requestId:draft.requestId,payload:{title:draft.name?.trim()??'',description,project_id:parent,due_date:draft.dueDate,is_core:draft.isCore,core_reason:draft.isCore?draft.coreReason?.trim()??null:null,completion_criteria:draft.isCore?draft.completionCriteria?.trim()??null:null}};
+  case 'project':return {kind:'project',requestId:draft.requestId,payload:{name:draft.name?.trim()??'',description,outcome:draft.outcome?.trim()??'',mainline_id:parent,due_date:draft.dueDate,planned_start_date:draft.plannedStartDate??null,planned_time:draft.plannedTime}};
+  case 'task':return {kind:'task',requestId:draft.requestId,payload:{title:draft.name?.trim()??'',description,project_id:parent,due_date:draft.dueDate,planned_start_date:draft.plannedStartDate??null,planned_time:draft.plannedTime,is_core:draft.isCore,core_reason:draft.isCore?draft.coreReason?.trim()??null:null,completion_criteria:draft.isCore?draft.completionCriteria?.trim()??null:null}};
   case 'capture':return {kind:'capture',requestId:draft.requestId,payload:{content:(draft.description??draft.sourceText).trim()}};
  }
 }

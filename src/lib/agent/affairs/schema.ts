@@ -2,7 +2,7 @@ import type {ModelAffairsInterpretation,ModelAffairsItem} from './types';
 const nullableText={type:['string','null'],maxLength:10000} as const;
 const properties={
   type:{type:'string',enum:['mainline','project','task','capture']},sourceText:{type:'string',minLength:1,maxLength:4000},
-  name:nullableText,description:nullableText,outcome:nullableText,dueDate:nullableText,plannedTime:nullableText,
+  name:nullableText,description:nullableText,outcome:nullableText,dueDate:nullableText,plannedTime:nullableText,plannedStartDate:nullableText,
   yearInferred:{type:'boolean'},isCore:{type:'boolean'},coreReason:nullableText,completionCriteria:nullableText,
   parentId:nullableText,parentIndex:{anyOf:[{type:'integer',minimum:0,maximum:19},{type:'null'}]},existingId:nullableText,
 };
@@ -17,7 +17,8 @@ export function parseAffairsInterpretation(v:unknown):ModelAffairsInterpretation
   if(!record(v)||Object.keys(v).length!==3||!text(v.message,500)||!Array.isArray(v.items)||v.items.length>20||!Array.isArray(v.unresolvedSegments)||v.unresolvedSegments.length>20)throw new Error('invalid_affairs_response');
   if(v.unresolvedSegments.some(s=>!text(s,4000)||!s.trim()))throw new Error('invalid_affairs_response');
   const items=v.items.map((item:unknown)=>{
-    if(!record(item)||Object.keys(item).length!==Object.keys(properties).length||Object.keys(item).some(k=>!(k in properties))||!['mainline','project','task','capture'].includes(String(item.type))||!text(item.sourceText,4000)||!item.sourceText.trim())throw new Error('invalid_affairs_item');
+    if(!record(item)||Object.keys(properties).filter(k=>k!=='plannedStartDate').some(k=>!Object.hasOwn(item,k))||Object.keys(item).some(k=>!Object.hasOwn(properties,k))||!['mainline','project','task','capture'].includes(String(item.type))||!text(item.sourceText,4000)||!item.sourceText.trim())throw new Error('invalid_affairs_item');
+    if(Object.hasOwn(item,'plannedStartDate')&&item.plannedStartDate!==null&&!text(item.plannedStartDate,10000))throw new Error('invalid_affairs_item');
     if(typeof item.yearInferred!=='boolean'||typeof item.isCore!=='boolean'||!(item.parentIndex===null||(Number.isInteger(item.parentIndex)&&Number(item.parentIndex)>=0&&Number(item.parentIndex)<20)))throw new Error('invalid_affairs_item');
     for(const key of ['name','description','outcome','dueDate','plannedTime','coreReason','completionCriteria','parentId','existingId'])if(item[key]!==null&&!text(item[key],10000))throw new Error('invalid_affairs_item');
     return item as unknown as ModelAffairsItem;

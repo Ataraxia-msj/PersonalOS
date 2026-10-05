@@ -28,7 +28,9 @@ export async function confirmAgentAffairs(client:AffairsQueryClient,input:Affair
  }
  if(!('payload' in input))return fail('缺少创建内容。');
  const allowed=Object.hasOwn(fields,input.kind)?fields[input.kind]:null;
- if(!allowed||!keys(input,['kind','requestId','payload'])||!object(input.payload)||!keys(input.payload,allowed))return fail('不支持的创建类型或字段。');
+ if(!allowed||!keys(input,['kind','requestId','payload'])||!object(input.payload))return fail('不支持的创建类型或字段。');
+ const optional=input.kind==='task'||input.kind==='project'?['planned_start_date','planned_time']:[];
+ if(!allowed.every(k=>Object.hasOwn(input.payload,k))||Object.keys(input.payload).some(k=>!allowed.includes(k)&&!optional.includes(k)))return fail('不支持的创建类型或字段。');
  for(const [key,value] of Object.entries(input.payload)){
   if(key==='is_core'){if(typeof value!=='boolean')return fail('核心资格格式无效。');}
   else if(key==='sort_order'){if(typeof value!=='number'||!Number.isInteger(value))return fail('排序格式无效。');}

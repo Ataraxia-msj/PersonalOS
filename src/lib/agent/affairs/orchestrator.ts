@@ -13,7 +13,7 @@ const systemPrompt=`你是 Personal OS 的事务录入助手，只提出新建�
 project必须用户明确提供成果，否则outcome=null等待补充。不生成成果、完成条件、进展、金币、提醒、编辑、删除、完成命令。
 isCore默认false；仅用户明确要求具体行动为核心并提供目标和完成条件时可提出true，最终仍由用户勾选。
 sourceText必须是用户原文中的连续片段。name可简洁概括。description只包含用户明确提供的信息。capture保存明确要求收集的内容。
-日期按Asia/Shanghai；无年份按nowShanghai年份填写并yearInferred=true，不擅自跨年。未来计划合法。plannedTime保留明确时间HH:mm，无时间为null；约会日期dueDate只用于计划日期，不是提醒。
+plannedStartDate只保留明确提供的开始日期，无开始日期为null，不从创建时间或子行动推算；日期按Asia/Shanghai；无年份按nowShanghai年份填写并yearInferred=true，不擅自跨年。未来计划合法。plannedTime保留明确时间HH:mm，无时间为null；约会日期dueDate只用于计划日期，不是提醒。
 只使用提供的真实候选ID；唯一精确同名可建议复用，语义相似也仅建议existingId，最终必须用户确认；未知ID禁止。
 项目父级只能主线，行动父级只能项目；没有明确归属为null。已有父级用parentId，本批父级用parentIndex（0开始）。不得同时填写，不得循环。
 mainline和capture没有父级：parentId必须null，parentIndex必须null。多条主线彼此不关联，不能将第一条主线当作其他主线的父级。task没有明确项目时parentId和parentIndex也必须null。
@@ -33,10 +33,12 @@ export async function interpretAffairsMessage(rawText:string,client:AffairsQuery
  const draftIds=model.items.map(()=>dependencies.uuid());
  const drafts=model.items.map((item,index):AffairsDraft=>{
   if(item.parentIndex!==null&&(!Number.isInteger(item.parentIndex)||item.parentIndex<0||item.parentIndex>=draftIds.length))throw new QwenProviderError('response_invalid');
-  const inferred=!!item.dueDate&&!/\d{4}\s*(?:年|[-/])/.test(item.sourceText);
+  const inferred=!!(item.dueDate||item.plannedStartDate)&&!/\d{4}\s*(?:年|[-/])/.test(item.sourceText);
   const relative=/(?:明年|后年|今年|去年|前年|今天|明天|后天|昨天|今晚|明早|明晚|(?:下|本|这|上)+(?:周|星期|个月|月))/.test(item.sourceText);
-  const dueDate=inferred&&!relative?`${shanghaiInput(now).slice(0,4)}${item.dueDate!.slice(4)}`:item.dueDate;
-  return {...item,dueDate,yearInferred:inferred||item.yearInferred,isCore:false,draftId:draftIds[index],requestId:dependencies.uuid(),rawText,parentDraftId:item.parentIndex===null?null:draftIds[item.parentIndex],mode:item.existingId?'reuse':'create',reuseId:item.existingId,matchConfirmed:false,dateConfirmed:false,duplicateConfirmed:false,issues:[]};
+  const normalizeYear=(value:string|null|undefined)=>value?(inferred&&!relative?`${shanghaiInput(now).slice(0,4)}${value.slice(4)}`:value):null;
+  const dueDate=normalizeYear(item.dueDate);
+  const plannedStartDate=normalizeYear(item.plannedStartDate);
+  return {...item,dueDate,plannedStartDate,yearInferred:inferred||item.yearInferred,isCore:false,draftId:draftIds[index],requestId:dependencies.uuid(),rawText,parentDraftId:item.parentIndex===null?null:draftIds[item.parentIndex],mode:item.existingId?'reuse':'create',reuseId:item.existingId,matchConfirmed:false,dateConfirmed:false,duplicateConfirmed:false,issues:[]};
  });
  const duplicates=await dependencies.duplicates(client,[...new Set(drafts.filter(d=>d.type==='task'&&d.name?.trim()&&[...d.name.trim()].length<=200).map(d=>d.name!.trim()))]);
  return {domain:'affairs',message:model.message,items:validateAffairsDrafts(drafts,options).items,options,unresolvedSegments:model.unresolvedSegments,duplicates};

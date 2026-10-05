@@ -15,6 +15,21 @@ const data: AffairsFormData = {
   serverNowISO: "2026-10-03T00:00:00Z",
   taskHistory: [],
 };
+it("submits structured schedule and clears time with its date",async()=>{
+ const user=userEvent.setup(),seen:FormData[]=[];
+ render(<TaskForm data={data} mode="create" action={async(_s,f)=>{seen.push(f);return {status:"error",message:"test rejection",fieldErrors:{},receipt:null};}}/>);
+ await user.type(screen.getByLabelText("行动名称"),"Interview");
+ await user.click(screen.getByText("更多选项"));
+ await user.type(screen.getByLabelText("开始日期（可选）"),"2026-10-01");
+ await user.type(screen.getByLabelText("截止日期（可选）"),"2026-10-08");
+ await user.type(screen.getByLabelText("时间（可选）"),"10:30");
+ await user.click(screen.getByRole("button",{name:"保存行动"}));
+ await waitFor(()=>expect(seen).toHaveLength(1));
+ expect(seen[0].get("planned_time")).toBe("10:30");
+ expect(seen[0].get("planned_start_date")).toBe("2026-10-01");
+ await user.clear(screen.getByLabelText("截止日期（可选）"));
+ expect(screen.getByLabelText("时间（可选）")).toHaveValue("");
+});
 it("creates ordinary independent tasks with no date and preserves uncertain request and payload", async () => {
   const seen: FormData[] = [];
   const action = vi.fn(async (_s, d: FormData) => {

@@ -3,6 +3,7 @@ export type AffairsKind='mainline'|'project'|'task'|'capture';
 export interface ModelAffairsItem {
   type:AffairsKind;sourceText:string;name:string|null;description:string|null;outcome:string|null;
   dueDate:string|null;plannedTime:string|null;yearInferred:boolean;isCore:boolean;
+  plannedStartDate?:string|null;
   coreReason:string|null;completionCriteria:string|null;parentId:string|null;parentIndex:number|null;existingId:string|null;
 }
 export interface ModelAffairsInterpretation {message:string;items:ModelAffairsItem[];unresolvedSegments:string[];}
