@@ -29,6 +29,7 @@ interface ConversationMessage {
 }
 
 interface AgentWorkspaceProps {
+  ownerId?:string;
   action?: (rawText: string) => Promise<AgentActionResult>;
   affairsConfirmAction?:AffairsConfirmAction;
   affairsDuplicateAction?:typeof checkAgentAffairsDuplicatesAction;
