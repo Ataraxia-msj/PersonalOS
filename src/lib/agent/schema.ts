@@ -1,4 +1,8 @@
 import type { ModelInterpretation, ModelTransactionDraft } from "./types";
+import {moneyToCents} from '@/lib/finance/budget-validation';
+import {reconciliationUuid} from '@/lib/finance/reconciliation-validation';
+import {financeFields,type ModelFinanceTurn} from './conversation/types';
+import {exact,parseFieldChanges,invalidConversation} from './conversation/validation';
 
 const transactionKeys = new Set([
   "accountId",
@@ -84,7 +88,7 @@ function parseTransaction(value: unknown): ModelTransactionDraft | null {
   if (!(value.purpose === null || (typeof value.purpose === "string" && transferPurposes.has(value.purpose)))) return null;
   if (!(value.amount === null || (typeof value.amount === "number" && Number.isFinite(value.amount)
     && value.amount > 0 && value.amount <= 999999999999.99
-    && Math.round(value.amount * 100) === value.amount * 100))) return null;
+    && moneyToCents(String(value.amount)) !== null))) return null;
   return value as unknown as ModelTransactionDraft;
 }
 
@@ -105,4 +109,29 @@ export function parseModelInterpretation(value: unknown): ModelInterpretation {
     transactions: transactions as ModelTransactionDraft[],
     unresolvedSegments: value.unresolvedSegments as string[],
   };
+}
+
+const changeSchema={type:'object',additionalProperties:false,properties:{field:{type:'string',enum:financeFields},value:{type:['string','number','boolean','null']},origin:{type:'string',enum:['explicit','suggested','default']}},required:['field','value','origin']} as const;
+const changesSchema={type:'array',maxItems:12,items:changeSchema} as const;
+export const financeConversationJsonSchema={type:'object',additionalProperties:false,properties:{
+ kind:{type:'string',enum:['patch','append','clarify','route']},
+ updates:{type:'array',maxItems:20,items:{type:'object',additionalProperties:false,properties:{draftId:{type:'string'},changes:changesSchema},required:['draftId','changes']}},
+ additions:financeInterpretationJsonSchema.properties.transactions,
+ ambiguity:{anyOf:[{type:'null'},{type:'object',additionalProperties:false,properties:{kind:{type:'string',enum:['field','target','direction']},field:{anyOf:[{type:'null'},{type:'string',enum:financeFields}]},targetIds:{type:'array',maxItems:20,items:{type:'string'}},proposedChanges:changesSchema},required:['kind','field','targetIds','proposedChanges']}]},
+ routeDomain:{anyOf:[{type:'null'},{type:'string',enum:['affairs','mixed','unsupported']}]},unresolvedSegments:financeInterpretationJsonSchema.properties.unresolvedSegments,
+},required:['kind','updates','additions','ambiguity','routeDomain','unresolvedSegments']} as const;
+
+export function parseModelFinanceTurn(value:unknown):ModelFinanceTurn {
+ exact(value,['kind','updates','additions','ambiguity','routeDomain','unresolvedSegments']);
+ if(!['patch','append','clarify','route'].includes(String(value.kind))||!Array.isArray(value.updates)||value.updates.length>20||![null,'affairs','mixed','unsupported'].includes(value.routeDomain as string|null))invalidConversation();
+ const targets=new Set<string>();
+ for(const update of value.updates){exact(update,['draftId','changes']);if(typeof update.draftId!=='string'||!reconciliationUuid.test(update.draftId)||targets.has(update.draftId))invalidConversation();targets.add(update.draftId);parseFieldChanges(update.changes);}
+ const parsed=parseModelInterpretation({message:'',transactions:value.additions,unresolvedSegments:value.unresolvedSegments});
+ for(const draft of parsed.transactions)parseFieldChanges(financeFields.map(field=>({field,value:draft[field],origin:'explicit'})));
+ if(value.ambiguity!==null){exact(value.ambiguity,['kind','field','targetIds','proposedChanges']);const a=value.ambiguity;
+  if(!['field','target','direction'].includes(String(a.kind))||(a.field!==null&&!financeFields.includes(a.field as typeof financeFields[number]))||!Array.isArray(a.targetIds)||a.targetIds.length>20||a.targetIds.some(x=>typeof x!=='string'||!reconciliationUuid.test(x)))invalidConversation();parseFieldChanges(a.proposedChanges);
+ }
+ if((value.kind==='append'&&value.updates.length)||(value.kind==='clarify'||value.kind==='route')&&(value.updates.length||parsed.transactions.length))invalidConversation();
+ if((value.kind==='route')!==(value.routeDomain!==null)||value.kind==='route'&&value.ambiguity!==null)invalidConversation();
+ return value as unknown as ModelFinanceTurn;
 }
