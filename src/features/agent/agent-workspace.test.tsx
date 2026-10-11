@@ -1,116 +1,46 @@
-import { act, render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { describe, expect, it,vi } from "vitest";
+import {act,fireEvent,render,screen,within,waitFor} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import {beforeEach,it,expect,vi} from 'vitest';
+import {AgentWorkspace} from './agent-workspace';
+import {handleFinanceTurn} from '@/lib/agent/conversation/orchestrator';
+import {id,financeOptions,meal,modelTurn} from '@/lib/agent/conversation/test-fixtures';
+import type {AgentTurnResult,FinanceTurnInput} from '@/lib/agent/conversation/types';
+import type {AgentConfirmationResult} from '@/lib/agent/types';
 import {draft as affairsDraft,options as affairsOptions} from '@/lib/agent/affairs/test-fixtures';
-
-import type { AgentActionResult, AgentTransactionDraft,AgentInterpretation } from "@/lib/agent/types";
-
-import { AgentWorkspace } from "./agent-workspace";
-
-const expense = (overrides: Partial<AgentTransactionDraft> = {}): AgentTransactionDraft => ({
-  accountId: "wechat",
-  accountName: "微信",
-  amount: 12,
-  budgetBucketId: "variable",
-  budgetBucketName: "变动必要开销",
-  categoryId: "food",
-  categoryName: "餐饮",
-  description: "早餐",
-  draftId: "draft-breakfast",
-  excludeFromBudget: false,
-  fromAccountId: null,
-  fromAccountName: null,
-  issues: [],
-  memo: null,
-  occurredAt: "2026-10-03T08:10",
-  purpose: null,
-  rawText: "微信早餐12，地铁3块",
-  requestId: null,
-  sourceText: "微信早餐12",
-  status: "ready",
-  toAccountId: null,
-  toAccountName: null,
-  type: "expense",
-  ...overrides,
+beforeEach(()=>sessionStorage.clear());
+const identityAction=async()=>({status:'success' as const,ownerId:id(20)});
+function realTurnAction(){let n=60;const interpret=vi.fn().mockResolvedValue(modelTurn({kind:'append',additions:[meal]}));return vi.fn(async(input:FinanceTurnInput):Promise<AgentTurnResult>=>{const result=await handleFinanceTurn(input,financeOptions,{now:new Date('2026-10-11T10:00:00+08:00'),uuid:()=>id(n++),interpret});return {status:'success',domain:'finance',state:result.state,options:financeOptions,message:result.message,ownerId:input.ownerId,turnId:input.turnId,baseRevision:input.baseRevision};});}
+async function send(user:ReturnType<typeof userEvent.setup>,text:string){await user.type(screen.getByRole('textbox',{name:'给 Agent 发消息'}),text);await user.click(screen.getByRole('button',{name:'发送消息'}));}
+it('updates one current preview across a short account answer',async()=>{
+ const user=userEvent.setup(),turnAction=realTurnAction();render(<AgentWorkspace ownerId={id(20)} turnAction={turnAction} identityAction={identityAction}/>);
+ await send(user,'午饭花了20');expect(await screen.findByRole('button',{name:'情侣小荷包'})).toBeVisible();
+ await send(user,'情侣小荷包');
+ await waitFor(()=>expect(screen.getAllByRole('article',{name:/交易预览/})).toHaveLength(1));
+ const card=screen.getByRole('article',{name:'交易预览 1'});expect(within(card).getByText('¥20.00')).toBeVisible();expect(within(card).getByText('情侣小荷包')).toBeVisible();expect(within(card).getByRole('button',{name:'确认并记录'})).toBeEnabled();
+ expect(turnAction.mock.calls[1][0].state?.items[0].draft.amount).toBe(20);
 });
-
-function result(overrides: Partial<AgentInterpretation> = {}): AgentActionResult {
-  const interpretation = {
-    domain:'finance' as const,
-    message: "识别到两笔支出。",
-    transactions: [expense(), expense({ amount: 3, description: "地铁", draftId: "draft-metro", sourceText: "地铁3块" })],
-    unresolvedSegments: [],
-    ...overrides,
-  };
-  return { interpretation, message: interpretation.message, status: "success" };
-}
-
-describe("AgentWorkspace", () => {
-  it("shows a pending state and then renders multiple drafts in source order", async () => {
-    const user = userEvent.setup();
-    let resolve!: (value: AgentActionResult) => void;
-    const action = () => new Promise<AgentActionResult>((done) => { resolve = done; });
-    render(<AgentWorkspace action={action} />);
-
-    await user.type(screen.getByRole("textbox", { name: "给 Agent 发消息" }), "微信早餐12，地铁3块");
-    await user.click(screen.getByRole("button", { name: "发送消息" }));
-
-    expect(screen.getByText("微信早餐12，地铁3块")).toBeVisible();
-    expect(screen.getByText("正在整理内容…")).toBeVisible();
-    expect(screen.getByRole("button", { name: "正在识别" })).toBeDisabled();
-
-    await act(async () => resolve(result()));
-
-    const previews = screen.getAllByRole("article", { name: /交易预览/ });
-    expect(previews).toHaveLength(2);
-    expect(within(previews[0]!).getByText("早餐")).toBeVisible();
-    expect(within(previews[1]!).getByText("地铁")).toBeVisible();
-  });
-
-  it("shows unresolved source text and incomplete draft issues", async () => {
-    const user = userEvent.setup();
-    render(<AgentWorkspace action={async () => result({
-      message: "有一笔需要补充。",
-      transactions: [expense({ accountId: null, accountName: null, issues: ["需要选择账户"], status: "needs_input" })],
-      unresolvedSegments: ["大概几十块"],
-    })} />);
-
-    await user.type(screen.getByRole("textbox", { name: "给 Agent 发消息" }), "晚饭大概几十块");
-    await user.click(screen.getByRole("button", { name: "发送消息" }));
-
-    expect(await screen.findByText("未能安全识别：大概几十块")).toBeVisible();
-    expect(screen.getByText("需要选择账户")).toBeVisible();
-    expect(screen.getByText("需要补充")).toBeVisible();
-  });
-
-  it("renders a safe server error without inventing a preview", async () => {
-    const user = userEvent.setup();
-    render(<AgentWorkspace action={async () => ({
-      interpretation: null,
-      message: "Agent 服务暂时不可用，请稍后重试。",
-      status: "error",
-    })} />);
-    await user.type(screen.getByRole("textbox", { name: "给 Agent 发消息" }), "记录午饭");
-    await user.click(screen.getByRole("button", { name: "发送消息" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Agent 服务暂时不可用");
-    expect(screen.queryByRole("article", { name: /交易预览/ })).not.toBeInTheDocument();
-  });
-
-  it("keeps the initial state when the submitted input is empty", async () => {
-    const user = userEvent.setup();
-    render(<AgentWorkspace action={async () => result()} />);
-
-    await user.click(screen.getByRole("button", { name: "发送消息" }));
-
-    expect(screen.getByRole("heading", { name: "今天想处理什么？" })).toBeVisible();
-    expect(screen.queryByRole("log")).not.toBeInTheDocument();
-  });
-  it('renders affairs cards and locks new messages when confirmation is uncertain',async()=>{
-    const user=userEvent.setup(),confirm=vi.fn().mockResolvedValue({status:'uncertain',message:'未知结果',receipt:null,objectId:null,reused:false});
-    render(<AgentWorkspace action={async()=>({status:'success',message:'事务预览',interpretation:{domain:'affairs',message:'事务预览',items:[affairsDraft()],options:affairsOptions,duplicates:[],unresolvedSegments:[]}})} affairsConfirmAction={confirm} affairsDuplicateAction={async()=>({status:'success',items:[]})}/>);
-    await user.type(screen.getByRole('textbox',{name:'给 Agent 发消息'}),'面试');await user.click(screen.getByRole('button',{name:'发送消息'}));
-    expect(await screen.findByRole('article',{name:'事务预览 1'})).toBeVisible();
-    await user.click(screen.getByRole('button',{name:/确认保存/}));expect(await screen.findByRole('alert')).toHaveTextContent('未知结果');
-    expect(screen.getByRole('textbox',{name:'给 Agent 发消息'})).toBeDisabled();expect(screen.getByRole('button',{name:'发送消息'})).toBeDisabled();
-  });
+it('does not submit during IME composition but supports normal Enter',async()=>{
+ const action=realTurnAction();render(<AgentWorkspace ownerId={id(20)} turnAction={action} identityAction={identityAction}/>);
+ const input=screen.getByRole('textbox',{name:'给 Agent 发消息'});fireEvent.change(input,{target:{value:'午饭花了20'}});fireEvent.compositionStart(input);fireEvent.keyDown(input,{key:'Enter',isComposing:true});expect(action).not.toHaveBeenCalled();
+ fireEvent.compositionEnd(input);fireEvent.keyDown(input,{key:'Enter'});await waitFor(()=>expect(action).toHaveBeenCalledOnce());
+});
+it('locks input and candidates during uncertain finance confirmation',async()=>{
+ const user=userEvent.setup();let resolve!:(r:AgentConfirmationResult)=>void;const confirm=vi.fn(()=>new Promise<AgentConfirmationResult>(r=>resolve=r));
+ render(<AgentWorkspace ownerId={id(20)} turnAction={realTurnAction()} identityAction={identityAction} confirmAction={confirm}/>);
+ await send(user,'午饭花了20');await user.click(await screen.findByRole('button',{name:'情侣小荷包'}));await user.click(await screen.findByRole('button',{name:'确认并记录'}));
+ await waitFor(()=>expect(confirm).toHaveBeenCalledOnce());expect(screen.getByRole('textbox',{name:'给 Agent 发消息'})).toBeDisabled();
+ await act(()=>resolve({status:'uncertain',entryId:null,message:'结果待核对'}));expect(screen.getByRole('button',{name:'结束待核对保护'})).toBeDisabled();
+ await user.click(screen.getByLabelText('我已核对交易记录'));await user.click(screen.getByRole('button',{name:'结束待核对保护'}));expect(confirm).toHaveBeenCalledOnce();expect(screen.getByRole('textbox',{name:'给 Agent 发消息'})).toBeEnabled();
+});
+it('preserves previews on ordinary action failures without inventing data',async()=>{
+ const user=userEvent.setup(),action=realTurnAction();render(<AgentWorkspace ownerId={id(20)} turnAction={action} identityAction={identityAction}/>);
+ await send(user,'午饭花了20');
+ action.mockImplementationOnce(async input=>({status:'error',domain:null,message:'服务暂时不可用',turnId:input.turnId,baseRevision:input.baseRevision}));
+ await send(user,'补充');expect(await screen.findByRole('alert')).toHaveTextContent('服务暂时不可用');expect(screen.getAllByRole('article',{name:/交易预览/})).toHaveLength(1);
+});
+it('preserves affairs previews and protects the shared composer for unknown saves',async()=>{
+ const user=userEvent.setup(),confirm=vi.fn().mockResolvedValue({status:'uncertain',message:'事务结果未知',receipt:null,objectId:null,reused:false});
+ const turnAction=async(input:FinanceTurnInput):Promise<AgentTurnResult>=>({status:'success',domain:'affairs',message:'事务预览',interpretation:{domain:'affairs',message:'事务预览',items:[affairsDraft()],options:affairsOptions,duplicates:[],unresolvedSegments:[]},ownerId:input.ownerId,turnId:input.turnId,baseRevision:input.baseRevision});
+ render(<AgentWorkspace ownerId={id(20)} turnAction={turnAction} identityAction={identityAction} affairsConfirmAction={confirm} affairsDuplicateAction={async()=>({status:'success',items:[]})}/>);
+ await send(user,'面试');expect(await screen.findByRole('article',{name:'事务预览 1'})).toBeVisible();await user.click(screen.getByRole('button',{name:/确认保存/}));expect(await screen.findByRole('alert')).toHaveTextContent('事务结果未知');expect(screen.getByRole('textbox',{name:'给 Agent 发消息'})).toBeDisabled();
 });

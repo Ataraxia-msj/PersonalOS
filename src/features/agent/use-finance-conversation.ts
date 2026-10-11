@@ -28,11 +28,11 @@ export function useFinanceConversation({ownerId,turnAction,identityAction,confir
  function protect(value:boolean){protectedRef.current=value;protectionCallback.current?.(value);}
  function changedIdentity(){epoch.current++;update(null);setOptions(null);setMessages([{id:crypto.randomUUID(),role:'assistant',text:'登录用户已改变或失效，请刷新页面后重新录入。',error:true}]);setProtectionFault(true);protect(true);}
  useEffect(()=>{
-  mounted.current=true;epoch.current++;busy.current=false;current.current=null;setState(null);setOptions(null);setMessages([]);setRestoredMarker(null);setProtectionFault(false);
+  mounted.current=true;const lifecycleEpoch=++epoch.current;busy.current=false;current.current=null;setState(null);setOptions(null);setMessages([]);setRestoredMarker(null);setProtectionFault(false);
   let blocked=false;
   try{const marker=readSubmissionProtection(sessionStorage,ownerId);setRestoredMarker(marker);blocked=Boolean(marker);}catch{setProtectionFault(true);blocked=true;}
   protectedRef.current=blocked;protectionCallback.current?.(blocked);setInitialized(true);setPending(false);
-  return ()=>{mounted.current=false;epoch.current++;};
+  return ()=>{mounted.current=false;epoch.current=lifecycleEpoch+1;};
  },[ownerId]);
  useEffect(()=>{
   const warn=(event:BeforeUnloadEvent)=>{if(busy.current||protectedRef.current||current.current?.items.some(editable)){event.preventDefault();event.returnValue='';}};

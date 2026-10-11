@@ -299,6 +299,27 @@
   gap: 12px;
 }
 
+.financePreview { display: grid; gap: 18px; margin-top: 28px; min-width: 0; }
+.fieldButton { border: 0; padding: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; max-width: 100%; overflow-wrap: anywhere; }
+.fieldButton:hover { color: var(--accent-strong); text-decoration: underline; text-underline-offset: 4px; }
+.draftMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 8px 4px; color: var(--text-secondary); font-size: 12px; }
+.draftMeta button { margin-left: auto; border: 0; padding: 6px; background: transparent; color: var(--text-secondary); cursor: pointer; }
+.draftEditor { margin-top: 10px; padding: 14px; border: 1px solid var(--divider-strong); border-radius: var(--radius-md); background: var(--surface); min-width: 0; }
+.draftEditor .affairsFields input, .draftEditor .affairsFields select { border-color: var(--divider-strong); background: var(--bg-deep); }
+.question { padding: 18px; border: 1px solid var(--divider-strong); border-radius: var(--radius-md); background: var(--surface); min-width: 0; }
+.question p { margin: 0 0 12px; line-height: 1.6; }
+.question small { color: var(--text-secondary); }
+.questionChoices { display: flex; flex-wrap: wrap; gap: 8px; }
+.questionChoices button { max-width: 100%; min-height: 40px; padding: 9px 14px; border: 1px solid var(--divider-strong); border-radius: 9px; background: var(--bg-deep); color: var(--text-primary); cursor: pointer; overflow-wrap: anywhere; }
+.questionChoices button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-strong); }
+.questionChoices button:disabled { opacity: .55; cursor: not-allowed; }
+.protectionPanel { margin-top: 24px; padding: 16px; border: 1px solid var(--negative); border-radius: var(--radius-md); background: var(--surface); font-size: 14px; }
+.protectionPanel p { margin-top: 0; }
+.protectionPanel label { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+.protectionPanel a { color: var(--accent-strong); text-decoration: underline; }
+.messages > article, .messages > article > div { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 520px) { .previewHeader { gap: 8px; flex-wrap: wrap; } .previewHeader > div { gap: 6px; flex-wrap: wrap; } .previewCard, .question { padding: 14px; } }
+
 .previewCard {
   padding: 18px;
   border: 1px solid var(--divider-strong);
