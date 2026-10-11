@@ -77,4 +77,5 @@ export type AgentConfirmationResult = {
   status: "success" | "warning" | "error" | "uncertain";
   message: string;
   entryId: string | null;
+  identityChanged?: boolean;
 };

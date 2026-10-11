@@ -62,3 +62,20 @@ it('does not release a marker or resurrect messages after unmount during submiss
  await act(async()=>{resolve({status:'success',entryId:id(80),message:'已记录'});await pending;});
  expect(sessionStorage.length).toBe(1);
 });
+it('clears identity-bound data and settles pending for preflight and confirmation identity changes',async()=>{
+ for(const preflight of [true,false]){
+  const hook=setup({identityAction:async()=>({status:'success',ownerId:preflight?id(99):id(20)}),confirmAction:async()=>({status:'error',entryId:null,message:'用户改变',identityChanged:true} as AgentConfirmationResult)});
+  await ready(hook);await act(()=>hook.result.current.confirm(id(10)));
+  expect(hook.result.current.state).toBeNull();expect(hook.result.current.options).toBeNull();expect(hook.result.current.pending).toBe(false);expect(hook.result.current.blocked).toBe(true);
+  expect(hook.result.current.messages.map(m=>m.text).join('')).not.toContain('午饭20');hook.unmount();
+ }
+});
+it('retains read-only saved receipts when a new batch starts, but clears them for another owner',async()=>{
+ const hook=setup();await ready(hook);await act(()=>hook.result.current.confirm(id(10)));
+ const next=conversation({batchId:id(90),revision:1,items:[expenseItem({draft:{...expenseItem().draft,draftId:id(91)}})]});
+ hook.turnAction.mockImplementationOnce(async input=>({status:'success',domain:'finance',state:next,options:financeOptions,message:'下一笔',ownerId:input.ownerId,turnId:input.turnId,baseRevision:input.baseRevision}));
+ await act(()=>hook.result.current.sendTurn({kind:'text',rawText:'下一笔'}));
+ expect((hook.result.current as unknown as {receipts:typeof next.items}).receipts[0].confirmation?.entryId).toBe(id(80));
+ hook.props.ownerId=id(99);hook.rerender();await waitFor(()=>expect(hook.result.current.state).toBeNull());
+ expect((hook.result.current as unknown as {receipts:typeof next.items}).receipts).toEqual([]);
+});

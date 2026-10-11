@@ -44,3 +44,9 @@ it('preserves affairs previews and protects the shared composer for unknown save
  render(<AgentWorkspace ownerId={id(20)} turnAction={turnAction} identityAction={identityAction} affairsConfirmAction={confirm} affairsDuplicateAction={async()=>({status:'success',items:[]})}/>);
  await send(user,'面试');expect(await screen.findByRole('article',{name:'事务预览 1'})).toBeVisible();await user.click(screen.getByRole('button',{name:/确认保存/}));expect(await screen.findByRole('alert')).toHaveTextContent('事务结果未知');expect(screen.getByRole('textbox',{name:'给 Agent 发消息'})).toBeDisabled();
 });
+it('retains oversized input and shows an error before clearing or sending',async()=>{
+ const action=realTurnAction();render(<AgentWorkspace ownerId={id(20)} turnAction={action} identityAction={identityAction}/>);
+ const input=screen.getByRole('textbox',{name:'给 Agent 发消息'});const text='字'.repeat(4001);
+ fireEvent.change(input,{target:{value:text}});fireEvent.click(screen.getByRole('button',{name:'发送消息'}));
+ expect(action).not.toHaveBeenCalled();expect(input).toHaveValue(text);expect(screen.getByRole('alert')).toHaveTextContent('4000');
+});

@@ -8,6 +8,7 @@ import type {checkAgentAffairsDuplicatesAction} from '@/app/agent-affairs-action
 import {agentCommands} from './data';
 import {useFinanceConversation} from './use-finance-conversation';
 import {FinanceConversationPreview} from './finance-conversation-preview';
+import {TransactionPreview} from './transaction-preview';
 import {AffairsPreview} from './affairs-preview';
 import styles from './agent-workspace.module.css';
 
@@ -19,6 +20,7 @@ interface AgentWorkspaceProps {
 const commandIcons={search:IconSearch,trend:IconChartLine,receipt:IconReceipt} as const;
 export function AgentWorkspace({ownerId,turnAction=interpretAgentTurnAction,identityAction=getAgentIdentityAction,confirmAction=confirmAgentTransactionAction,affairsConfirmAction,affairsDuplicateAction}:AgentWorkspaceProps) {
  const [input,setInput]=useState(''),[checked,setChecked]=useState(false),[protectedPreviews,setProtectedPreviews]=useState<string[]>([]);
+ const [inputError,setInputError]=useState('');
  const affairsProtection=useRef(new Set<string>()),financeProtection=useRef(false),composing=useRef(false);
  const finance=useFinanceConversation({ownerId,turnAction,identityAction,confirmAction,externalBlocked:protectedPreviews.length>0,onProtectionChange:value=>{financeProtection.current=value;}});
  const inputLocked=finance.pending||finance.blocked||protectedPreviews.length>0;
@@ -33,6 +35,8 @@ export function AgentWorkspace({ownerId,turnAction=interpretAgentTurnAction,iden
  }
  function submitMessage(rawMessage:string){
   const text=rawMessage.trim();if(!text||inputLocked||affairsProtection.current.size||financeProtection.current)return;
+  if([...text].length>4000){setInputError('单次输入不能超过 4000 个字符，请拆分发送。');return;}
+  setInputError('');
   setInput('');turn({kind:'text',rawText:text});
  }
  function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();if(!composing.current)submitMessage(input);}
@@ -48,6 +52,7 @@ export function AgentWorkspace({ownerId,turnAction=interpretAgentTurnAction,iden
     </div></article>)}
     {finance.pending?<article className={styles.agentMessage}><span>Agent</span><div className={styles.pendingReply}>正在整理内容…</div></article>:null}
    </div>
+   {finance.receipts.length?<section aria-label="已记录交易回执">{finance.receipts.map(item=><TransactionPreview key={item.draft.draftId} draft={item.draft} index={item.ordinal-1} controlled={{result:item.confirmation,isPending:false,disabled:true,onConfirm:()=>{}}}/>)}</section>:null}
    {finance.state&&finance.options?<FinanceConversationPreview state={finance.state} options={finance.options} disabled={inputLocked} onTurn={turn} onConfirm={id=>{if(!affairsProtection.current.size)void finance.confirm(id);}}/>:null}
    {finance.blocked&&!finance.pending?<section className={styles.protectionPanel} aria-label="提交结果待核对"><p>有提交结果需要核对。请先查看交易记录，不要重复录入。</p><a href="/finance/transactions" target="_blank" rel="noreferrer">打开交易记录</a><label><input type="checkbox" checked={checked} onChange={event=>setChecked(event.target.checked)}/>我已核对交易记录</label><button type="button" className={styles.confirmButton} disabled={!checked} onClick={()=>{void finance.acknowledgeCheckedResult(checked);setChecked(false);}}>结束待核对保护</button></section>:null}
   </section>:<section className={styles.hero}><div className={styles.status}><span className={styles.statusDot}/>Agent 已就绪</div><h1>今天想处理什么？</h1></section>}
@@ -58,6 +63,7 @@ export function AgentWorkspace({ownerId,turnAction=interpretAgentTurnAction,iden
     <button aria-label="当前模型" className={styles.modelButton} disabled type="button">Qwen 3.7 Flash<IconChevronDown aria-hidden="true" size={16} stroke={1.6}/></button><span aria-hidden="true" className={styles.composerDivider}/>
     <button aria-label={finance.pending?'正在识别':'发送消息'} className={styles.sendButton} disabled={inputLocked} type="submit"><IconSend2 aria-hidden="true" size={23} stroke={1.7}/></button>
    </form>
+   {inputError?<p role="alert">{inputError}</p>:null}
    {!hasConversation?<><div aria-label="建议命令" className={styles.commands}>{agentCommands.map(command=>{const Icon=commandIcons[command.icon];return <button className={styles.command} key={command.id} disabled={inputLocked} onClick={()=>setInput(command.prompt)} type="button"><Icon aria-hidden="true" size={18} stroke={1.6}/><kbd>{command.shortcut}</kbd><span>{command.label}</span></button>;})}</div><p className={styles.commandHint}>一段话可记录多笔 · 缺少的信息逐项补充 · 确认后才保存</p></>:null}
   </div>
  </main>;

@@ -4,6 +4,7 @@ import {editable} from './state';
 import {invalidConversation} from './validation';
 
 const blankTurn=():ModelFinanceTurn=>({kind:'patch',updates:[],additions:[],ambiguity:null,routeDomain:null,unresolvedSegments:[]});
+export class StaleFinanceChoice extends Error {}
 function question(state:FinanceConversation,kind:FinanceQuestion['kind'],field:FinanceField|null,ids:string[],text:string,choices:FinanceQuestion['choices']):FinanceQuestion {
  return {id:`${state.batchId}:${state.revision}:${kind}:${field??'target'}`,kind,field,targetIds:ids,text,choices};
 }
@@ -41,10 +42,10 @@ export function buildFinanceQuestion(state:FinanceConversation,options:AgentFina
  return question(state,'field',field,[d.draftId],`第 ${item.ordinal} 笔：${labels[field]??'请补充这项信息。'}`,fieldChoices(field,state,options,d.draftId));
 }
 export function resolveFinanceSelection(state:FinanceConversation,selection:Extract<FinanceTurn,{kind:'selection'}>,options:AgentFinanceOptions):ModelFinanceTurn {
- const previous=state.pendingQuestion;if(!previous||previous.id!==selection.questionId)invalidConversation();
+ const previous=state.pendingQuestion;if(!previous||previous.id!==selection.questionId||!previous.choices.some(c=>c.id===selection.choiceId))invalidConversation();
  const ambiguity=previous.kind==='target'?{kind:'target' as const,field:null,targetIds:previous.targetIds,proposedChanges:state.pendingTargetChanges??[]}:previous.kind==='field'?{kind:'field' as const,field:previous.field,targetIds:previous.targetIds,proposedChanges:[]}:null;
  const rebuilt=buildFinanceQuestion(state,options,ambiguity);
- if(!rebuilt||rebuilt.kind!==previous.kind||!rebuilt.choices.some(c=>c.id===selection.choiceId))invalidConversation();
+ if(!rebuilt||rebuilt.kind!==previous.kind||!rebuilt.choices.some(c=>c.id===selection.choiceId))throw new StaleFinanceChoice();
  const result=blankTurn();
  if(previous.kind==='target'){if(!state.pendingTargetChanges?.length)invalidConversation();result.updates=[{draftId:selection.choiceId,changes:state.pendingTargetChanges}];}
  else if(previous.kind==='direction'){

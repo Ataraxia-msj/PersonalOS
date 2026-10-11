@@ -24,7 +24,7 @@ it('validates auth, uses one candidate read, and bypasses classification for act
 it('blocks mismatched identity before model and mutation',async()=>{
  getClaims.mockResolvedValue({data:{claims:{sub:id(99)}},error:null});
  expect(await interpretAgentTurnAction(textInput('午饭20'))).toMatchObject({status:'error',identityChanged:true});
- expect((await confirmAgentTransactionAction(expenseItem().draft,id(20))).status).toBe('error');
+ expect(await confirmAgentTransactionAction(expenseItem().draft,id(20))).toMatchObject({status:'error',identityChanged:true});
  expect(interpretFinanceTurn).not.toHaveBeenCalled();expect(getAgentFinanceOptions).not.toHaveBeenCalled();expect(confirmAgentTransaction).not.toHaveBeenCalled();
 });
 it('routes only the current text to affairs on the same verified client',async()=>{

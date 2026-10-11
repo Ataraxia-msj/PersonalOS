@@ -90,9 +90,9 @@ export async function confirmAgentTransactionAction(
     client = await createClient();
     const { data, error } = await client.auth.getClaims();
     if (error || !data?.claims?.sub) {
-      return confirmationFailure("登录状态已失效，请重新登录后再确认交易。");
+      return {...confirmationFailure("登录状态已失效，请重新登录后再确认交易。"),...(expectedOwnerId?{identityChanged:true}:{})};
     }
-    if(expectedOwnerId!==undefined&&expectedOwnerId!==data.claims.sub)return confirmationFailure('登录用户已改变，请刷新页面后重新录入。');
+    if(expectedOwnerId!==undefined&&expectedOwnerId!==data.claims.sub)return {...confirmationFailure('登录用户已改变，请刷新页面后重新录入。'),identityChanged:true};
   } catch {
     return confirmationFailure("暂时无法验证登录状态，请刷新页面后重试。");
   }

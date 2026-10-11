@@ -3,7 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import type {getAgentIdentityAction,confirmAgentTransactionAction} from '@/app/agent-actions';
 import type {AgentFinanceOptions,AgentConfirmationResult} from '@/lib/agent/types';
 import type {AffairsInterpretation} from '@/lib/agent/affairs/types';
-import type {AgentTurnResult,FinanceConversation,FinanceTurn,FinanceTurnInput} from '@/lib/agent/conversation/types';
+import type {AgentTurnResult,ConversationItem,FinanceConversation,FinanceTurn,FinanceTurnInput} from '@/lib/agent/conversation/types';
 import {editable,protectedConversation,setFinanceSubmission} from '@/lib/agent/conversation/state';
 import {validateConversation} from '@/lib/agent/conversation/validation';
 import {clearSubmissionProtection,readSubmissionProtection,writeSubmissionProtection,type SubmissionMarker} from './submission-protection';
@@ -19,6 +19,7 @@ export function useFinanceConversation({ownerId,turnAction,identityAction,confir
  const [messages,setMessages]=useState<AgentConversationMessage[]>([]),[pending,setPending]=useState(true);
  const [restoredMarker,setRestoredMarker]=useState<SubmissionMarker|null>(null),[protectionFault,setProtectionFault]=useState(false);
  const [initialized,setInitialized]=useState(false);
+ const [receipts,setReceipts]=useState<ConversationItem[]>([]);
  const current=useRef<FinanceConversation|null>(null),busy=useRef(false),protectedRef=useRef(true),epoch=useRef(0),mounted=useRef(false);
  const owner=useRef(ownerId),external=useRef(externalBlocked),protectionCallback=useRef(onProtectionChange);
  owner.current=ownerId;external.current=externalBlocked;protectionCallback.current=onProtectionChange;
@@ -26,9 +27,9 @@ export function useFinanceConversation({ownerId,turnAction,identityAction,confir
  function update(next:FinanceConversation|null){current.current=next;setState(next);}
  function message(text:string,error=false){setMessages(m=>[...m,{id:crypto.randomUUID(),role:'assistant',text,error}]);}
  function protect(value:boolean){protectedRef.current=value;protectionCallback.current?.(value);}
- function changedIdentity(){epoch.current++;update(null);setOptions(null);setMessages([{id:crypto.randomUUID(),role:'assistant',text:'登录用户已改变或失效，请刷新页面后重新录入。',error:true}]);setProtectionFault(true);protect(true);}
+ function changedIdentity(){epoch.current++;busy.current=false;setPending(false);update(null);setOptions(null);setReceipts([]);setRestoredMarker(null);setMessages([{id:crypto.randomUUID(),role:'assistant',text:'登录用户已改变或失效，请刷新页面后重新录入。',error:true}]);setProtectionFault(true);protect(true);}
  useEffect(()=>{
-  mounted.current=true;const lifecycleEpoch=++epoch.current;busy.current=false;current.current=null;setState(null);setOptions(null);setMessages([]);setRestoredMarker(null);setProtectionFault(false);
+  mounted.current=true;const lifecycleEpoch=++epoch.current;busy.current=false;current.current=null;setState(null);setOptions(null);setReceipts([]);setMessages([]);setRestoredMarker(null);setProtectionFault(false);
   let blocked=false;
   try{const marker=readSubmissionProtection(sessionStorage,ownerId);setRestoredMarker(marker);blocked=Boolean(marker);}catch{setProtectionFault(true);blocked=true;}
   protectedRef.current=blocked;protectionCallback.current?.(blocked);setInitialized(true);setPending(false);
@@ -53,6 +54,7 @@ export function useFinanceConversation({ownerId,turnAction,identityAction,confir
    if(result.ownerId!==expectedOwner){changedIdentity();return;}
    if(result.domain==='finance'){
     validateConversation(result.state);if(result.state.ownerId!==expectedOwner)throw new Error('invalid response');
+    if(current.current&&current.current.batchId!==result.state.batchId){const completed=structuredClone(current.current.items.filter(i=>i.lifecycle==='saved'));setReceipts(r=>[...r,...completed]);}
     update(result.state);setOptions(result.options);message(result.message);
    }else setMessages(m=>[...m,{id:`assistant-${turnId}`,role:'assistant',text:result.message,interpretation:result.interpretation}]);
   }catch{if(alive(token,expectedOwner))message('暂时无法更新预览，当前草稿保留。请稍后重试。',true);}
@@ -73,6 +75,7 @@ export function useFinanceConversation({ownerId,turnAction,identityAction,confir
    let result:AgentConfirmationResult;
    try{result=await confirmAction(structuredClone(item.draft),expectedOwner);}catch{result={status:'uncertain',entryId:null,message:'尚未确认保存结果，请核对交易记录，不要重复提交。'};}
    if(!alive(token,expectedOwner))return;
+   if(result.identityChanged){changedIdentity();try{clearSubmissionProtection(sessionStorage,expectedOwner);}catch{/* Keep the old owner's marker if storage is unavailable; UI remains locked. */}return;}
    const next=setFinanceSubmission(current.current!,draftId,{kind:'result',result});update(next);
    if(next.items.find(i=>i.draft.draftId===draftId)?.lifecycle==='uncertain'){
     marker={...marker,status:'uncertain'};setRestoredMarker(marker);try{writeSubmissionProtection(sessionStorage,marker);}catch{setProtectionFault(true);}protect(true);
@@ -100,5 +103,5 @@ export function useFinanceConversation({ownerId,turnAction,identityAction,confir
   }catch{if(alive(token,expectedOwner))message('保护信息仍未清理，请稍后再次核对处理。',true);}
   finally{if(alive(token,expectedOwner)){busy.current=false;setPending(false);}}
  }
- return {state,options,messages,pending,blocked,restoredMarker,sendTurn,confirm,acknowledgeCheckedResult,protectionFault};
+ return {state,options,messages,receipts,pending,blocked,restoredMarker,sendTurn,confirm,acknowledgeCheckedResult,protectionFault};
 }
