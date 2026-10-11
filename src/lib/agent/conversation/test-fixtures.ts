@@ -10,7 +10,7 @@ export const financeOptions: AgentFinanceOptions = {
 };
 export const meal: ModelTransactionDraft = {type:'expense',sourceText:'午饭花了20',amount:20,description:'午饭',accountId:null,categoryId:id(4),budgetBucketId:null,excludeFromBudget:false,occurredAt:null,memo:null,fromAccountId:null,toAccountId:null,purpose:null};
 export function expenseItem(overrides: Partial<ConversationItem> = {}): ConversationItem {
-  return {draft:{...meal,draftId:id(10),requestId:null,rawText:meal.sourceText,accountName:null,categoryName:'餐饮',budgetBucketName:null,fromAccountName:null,toAccountName:null,status:'needs_input',issues:['需要选择账户']},ordinal:1,lifecycle:'editing',origins:{categoryId:'suggested'},timeAssumption:null,attempted:false,confirmation:null,...overrides};
+  return {draft:{...meal,draftId:id(10),requestId:null,rawText:meal.sourceText,accountName:null,categoryName:'餐饮',budgetBucketName:null,fromAccountName:null,toAccountName:null,status:'needs_input',issues:['需要选择账户']},ordinal:1,lifecycle:'editing',origins:{categoryId:'suggested'},timeAssumption:null,attempted:false,confirmation:null,budgetChoice:null,...overrides};
 }
 export function conversation(overrides: Partial<FinanceConversation> = {}): FinanceConversation {
   return {ownerId:id(20),conversationId:id(21),batchId:id(22),revision:0,items:[expenseItem()],intentSeed:null,pendingQuestion:null,pendingTargetChanges:null,recentUserTexts:[],appliedTurnIds:[],...overrides};

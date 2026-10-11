@@ -8,7 +8,7 @@ export function createFinanceConversation(ownerId:string,uuid:()=>string):Financ
   return {ownerId,conversationId:uuid(),batchId:uuid(),revision:0,items:[],intentSeed:null,pendingQuestion:null,pendingTargetChanges:null,recentUserTexts:[],appliedTurnIds:[]};
 }
 export function newConversationItem(model:ModelTransactionDraft,uuid:()=>string,ordinal:number):ConversationItem {
-  return {draft:{...model,draftId:uuid(),requestId:model.type==='expense'?null:uuid(),rawText:model.sourceText,accountName:null,categoryName:null,budgetBucketName:null,fromAccountName:null,toAccountName:null,status:'needs_input',issues:[]},ordinal,lifecycle:'editing',origins:{categoryId:model.categoryId?'suggested':'default',budgetBucketId:model.budgetBucketId?'explicit':'default',excludeFromBudget:model.excludeFromBudget?'explicit':'default'},timeAssumption:null,attempted:false,confirmation:null};
+  return {draft:{...model,draftId:uuid(),requestId:model.type==='expense'?null:uuid(),rawText:model.sourceText,accountName:null,categoryName:null,budgetBucketName:null,fromAccountName:null,toAccountName:null,status:'needs_input',issues:[]},ordinal,lifecycle:'editing',origins:{categoryId:model.categoryId?'suggested':'default',budgetBucketId:model.budgetBucketId?'explicit':'default',excludeFromBudget:model.excludeFromBudget?'explicit':'default'},timeAssumption:null,attempted:false,confirmation:null,budgetChoice:model.budgetBucketId};
 }
 export function applyFinanceChanges(state:FinanceConversation,turnId:string,changes:ModelFinanceTurn,uuid:()=>string):FinanceConversation {
   if(state.appliedTurnIds.includes(turnId))return state;
@@ -19,6 +19,7 @@ export function applyFinanceChanges(state:FinanceConversation,turnId:string,chan
     const item=next.items.find(i=>i.draft.draftId===update.draftId);if(!item||!editable(item))invalidConversation();
     for(const change of parseFieldChanges(update.changes)){
       Object.assign(item.draft,{[change.field]:change.value});item.origins[change.field]=change.origin;
+      if(change.field==='budgetBucketId')item.budgetChoice=change.value as string|null;
       if(change.field==='occurredAt')item.timeAssumption=null;
     }
     if(item.draft.excludeFromBudget)item.draft.budgetBucketId=null;

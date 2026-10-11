@@ -8,7 +8,7 @@ export interface FieldChange {field:FinanceField;value:string|number|boolean|nul
 export interface ConversationItem {
   draft:AgentTransactionDraft; ordinal:number; lifecycle:'editing'|'ready'|'saving'|'saved'|'uncertain'|'discarded';
   origins:Partial<Record<FinanceField,FieldOrigin>>;timeAssumption:'recorded_now'|'date_only'|null;
-  attempted:boolean;confirmation:AgentConfirmationResult|null;
+  attempted:boolean;confirmation:AgentConfirmationResult|null;budgetChoice:string|null;
 }
 export interface FinanceQuestion {id:string;kind:'field'|'target'|'direction';field:FinanceField|null;targetIds:string[];text:string;choices:Array<{id:string;label:string}>}
 export interface FinanceConversation {

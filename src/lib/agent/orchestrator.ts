@@ -45,12 +45,12 @@ function validOccurredAt(value: string | null, now: Date, issues: string[]) {
   return shanghaiDateTime(date).slice(0, 16);
 }
 
-function deriveDraft(
+export function deriveAgentDraft(
   model: ModelTransactionDraft,
   rawText: string,
   options: AgentFinanceOptions,
   now: Date,
-  uuid: () => string,
+  ids: {draftId:string;requestId:string|null},
 ): AgentTransactionDraft {
   const issues: string[] = [];
   if (model.amount === null) issues.push("需要准确金额");
@@ -113,14 +113,14 @@ function deriveDraft(
     budgetBucketName: model.excludeFromBudget ? null : bucket?.name ?? null,
     categoryId: model.type === "transfer" ? null : model.categoryId,
     categoryName: category?.name ?? null,
-    draftId: uuid(),
+    draftId: ids.draftId,
     fromAccountId: model.type === "transfer" ? model.fromAccountId : null,
     fromAccountName: fromAccount?.name ?? null,
     issues,
     occurredAt,
     purpose: model.type === "transfer" ? model.purpose : null,
     rawText,
-    requestId: model.type === "expense" ? null : uuid(),
+    requestId: ids.requestId,
     status: issues.length === 0 ? "ready" : "needs_input",
     toAccountId: model.type === "transfer" ? model.toAccountId : null,
     toAccountName: toAccount?.name ?? null,
@@ -141,12 +141,12 @@ export async function interpretAgentMessage(
   });
   return {
     message: model.message,
-    transactions: model.transactions.map((draft) => deriveDraft(
+    transactions: model.transactions.map((draft) => deriveAgentDraft(
       draft,
       rawText,
       options,
       now,
-      dependencies.uuid,
+      {draftId:dependencies.uuid(),requestId:draft.type==='expense'?null:dependencies.uuid()},
     )),
     unresolvedSegments: model.unresolvedSegments,
   };

@@ -31,7 +31,8 @@ export function validateConversation(state:unknown):asserts state is FinanceConv
   if(!uuid(state.ownerId)||!uuid(state.conversationId)||!uuid(state.batchId)||!Number.isSafeInteger(state.revision)||(state.revision as number)<0||!Array.isArray(state.items)||state.items.length>20)invalidConversation();
   const ids=new Set(),ordinals=new Set();
   for(const item of state.items){
-    exact(item,['draft','ordinal','lifecycle','origins','timeAssumption','attempted','confirmation']);
+    exact(item,['draft','ordinal','lifecycle','origins','timeAssumption','attempted','confirmation','budgetChoice']);
+    if(item.budgetChoice!==null&&!uuid(item.budgetChoice))invalidConversation();
     exact(item.draft,[...financeFields,'sourceText',...draftExtra]);
     const d=item.draft;
     if(!uuid(d.draftId)||(d.requestId!==null&&!uuid(d.requestId))||!string(d.rawText,4000)||!d.rawText.trim()||!['ready','needs_input'].includes(String(d.status))||!stringList(d.issues,20)||draftExtra.filter(k=>k.endsWith('Name')).some(k=>d[k]!==null&&!string(d[k])))invalidConversation();
