@@ -27,9 +27,13 @@ export function buildFinanceQuestion(state:FinanceConversation,options:AgentFina
  if(ambiguity?.kind==='target'){
   const items=state.items.filter(i=>editable(i)&&(!ambiguity.targetIds.length||ambiguity.targetIds.includes(i.draft.draftId)));
   if(!items.length)invalidConversation();
-  return question(state,'target',null,items.map(i=>i.draft.draftId),'要修改哪一笔？',items.map(i=>({id:i.draft.draftId,label:`第 ${i.ordinal} 笔 · ${i.draft.description??'交易'}`})));
+  return question(state,'target',ambiguity.field,items.map(i=>i.draft.draftId),'要修改哪一笔？',items.map(i=>({id:i.draft.draftId,label:`第 ${i.ordinal} 笔 · ${i.draft.description??'交易'}`})));
  }
- const item=state.items.find(i=>editable(i)&&i.draft.status!=='ready');if(!item)return null;
+ if(ambiguity?.kind==='field'&&ambiguity.field===null&&ambiguity.targetIds.length){
+  const target=state.items.find(i=>editable(i)&&ambiguity.targetIds.includes(i.draft.draftId));if(!target)invalidConversation();
+  return question(state,'field',null,[target.draft.draftId],`第 ${target.ordinal} 笔想修改什么？可以直接说金额、账户或日期。`,[]);
+ }
+ const item=ambiguity?.kind==='field'&&ambiguity.targetIds.length?state.items.find(i=>editable(i)&&ambiguity.targetIds.includes(i.draft.draftId)):state.items.find(i=>editable(i)&&i.draft.status!=='ready');if(!item)return null;
  const d=item.draft,issues=d.issues.join(' ');
  let field:FinanceField=ambiguity?.field??'amount';
  if(!ambiguity?.field){
@@ -39,15 +43,22 @@ export function buildFinanceQuestion(state:FinanceConversation,options:AgentFina
   else field=issues.includes('账户')?'accountId':issues.includes('分类')&&issues.includes('预算')?'budgetBucketId':'categoryId';
  }
  const labels:Partial<Record<FinanceField,string>>={amount:'金额是多少？',occurredAt:'什么时候发生的？',accountId:d.type==='income'?'收入到了哪个账户？':'用哪个账户支付？',categoryId:'归到哪个分类？',budgetBucketId:'归到哪个预算分类？',fromAccountId:'从哪个账户转出？',toAccountId:'转入哪个账户？',purpose:'这笔转账是什么用途？'};
+ if(!ambiguity&&field==='accountId'&&d.type==='expense'){
+  const missing=state.items.filter(i=>editable(i)&&i.draft.type==='expense'&&i.draft.accountId===null&&i.draft.amount!==null);
+  if(missing.length>1)return question(state,'field',field,missing.map(i=>i.draft.draftId),`这 ${missing.length} 笔支出都用哪个账户支付？如果账户不同，可以分别告诉我。`,fieldChoices(field,state,options,d.draftId));
+ }
  return question(state,'field',field,[d.draftId],`第 ${item.ordinal} 笔：${labels[field]??'请补充这项信息。'}`,fieldChoices(field,state,options,d.draftId));
 }
 export function resolveFinanceSelection(state:FinanceConversation,selection:Extract<FinanceTurn,{kind:'selection'}>,options:AgentFinanceOptions):ModelFinanceTurn {
  const previous=state.pendingQuestion;if(!previous||previous.id!==selection.questionId||!previous.choices.some(c=>c.id===selection.choiceId))invalidConversation();
- const ambiguity=previous.kind==='target'?{kind:'target' as const,field:null,targetIds:previous.targetIds,proposedChanges:state.pendingTargetChanges??[]}:previous.kind==='field'?{kind:'field' as const,field:previous.field,targetIds:previous.targetIds,proposedChanges:[]}:null;
+ const ambiguity=previous.kind==='target'?{kind:'target' as const,field:previous.field,targetIds:previous.targetIds,proposedChanges:state.pendingTargetChanges??[]}:previous.kind==='field'?{kind:'field' as const,field:previous.field,targetIds:previous.targetIds,proposedChanges:[]}:null;
  const rebuilt=buildFinanceQuestion(state,options,ambiguity);
  if(!rebuilt||rebuilt.kind!==previous.kind||!rebuilt.choices.some(c=>c.id===selection.choiceId))throw new StaleFinanceChoice();
  const result=blankTurn();
- if(previous.kind==='target'){if(!state.pendingTargetChanges?.length)invalidConversation();result.updates=[{draftId:selection.choiceId,changes:state.pendingTargetChanges}];}
+ if(previous.kind==='target'){
+  if(state.pendingTargetChanges?.length)result.updates=[{draftId:selection.choiceId,changes:state.pendingTargetChanges}];
+  else {result.kind='clarify';result.ambiguity={kind:'field',field:previous.field,targetIds:[selection.choiceId],proposedChanges:[]};}
+ }
  else if(previous.kind==='direction'){
   if(!state.intentSeed)invalidConversation();
   const draft:ModelTransactionDraft={type:selection.choiceId as ModelTransactionDraft['type'],accountId:selection.choiceId==='transfer'?null:state.intentSeed.accountId,fromAccountId:selection.choiceId==='transfer'?state.intentSeed.accountId:null,toAccountId:null,amount:null,description:null,memo:null,occurredAt:null,categoryId:null,budgetBucketId:null,excludeFromBudget:false,purpose:null,sourceText:[...state.intentSeed.rawText].slice(0,1000).join('')};

@@ -28,7 +28,7 @@ const providerMessages: Record<QwenProviderError["code"], string> = {
   provider_rejected: "Agent 服务暂时不可用，请稍后重试。",
   provider_timeout: "Agent 识别超时，请稍后重新提交。",
   response_incomplete: "Agent 返回不完整，请重新提交这段内容。",
-  response_invalid: "Agent 没有返回可安全处理的结果，请换一种说法后重试。",
+  response_invalid: "识别结果未通过校验，本次没有写入。原文已保留，可以重试或补充说明。",
 };
 
 const failure = (message: string): AgentActionResult => ({

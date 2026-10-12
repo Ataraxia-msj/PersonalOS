@@ -9,26 +9,58 @@ import {invalidConversation,parseFinanceTurnInput} from './validation';
 import type {FieldChange,FinanceConversation,FinanceTurnInput,ModelFinanceTurn} from './types';
 
 const empty=():ModelFinanceTurn=>({kind:'patch',updates:[],additions:[],ambiguity:null,routeDomain:null,unresolvedSegments:[]});
+const ordinalPattern=/第([一二三四五六七八九十两]+|\d+)\s*笔/;
+function ordinalValue(text:string){
+ const digits:Record<string,number>={一:1,二:2,两:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9};
+ if(/^\d+$/.test(text))return Number(text);
+ if(text.includes('十')){const [tens,units]=text.split('十');return (digits[tens]??1)*10+(digits[units]??0);}
+ return digits[text];
+}
+function targetEvidence(text:string,ordinal:number){
+ if(!ordinalPattern.test(text))return text;
+ return text.split(/(?=第(?:[一二三四五六七八九十两]+|\d+)\s*笔)/).filter(part=>{const match=part.match(ordinalPattern);return match&&ordinalValue(match[1])===ordinal;}).join(' ');
+}
 function assertCandidates(changes:FieldChange[],options:AgentFinanceOptions){
  for(const c of changes){if(c.value===null||!c.field.endsWith('Id'))continue;
   const candidates=c.field==='categoryId'?[...options.expenseCategories,...options.incomeCategories]:c.field==='budgetBucketId'?options.budgetBuckets:options.accounts;
   if(!candidates.some(x=>x.id===c.value))invalidConversation();
  }
 }
-function sanitizeOrigins(result:ModelFinanceTurn,rawText:string,options:AgentFinanceOptions):ModelFinanceTurn {
+function sanitizeOrigins(result:ModelFinanceTurn,rawText:string,options:AgentFinanceOptions,state:FinanceConversation):ModelFinanceTurn {
  const next=structuredClone(result);
+ for(const update of next.updates)assertCandidates(update.changes,options);
+ if(next.ambiguity)assertCandidates(next.ambiguity.proposedChanges,options);
+ const accountFields=['accountId','fromAccountId','toAccountId'] as const;
+ const updateText=next.additions.reduce((text,addition)=>text.replaceAll(addition.sourceText,''),rawText);
+ const accountWasNamed=(value:unknown,text:string)=>options.accounts.some(account=>account.id===value&&text.includes(account.name));
+ const dateWasSpecified=(text:string)=>/今天|昨天|前天|今早|昨晚|昨早|今[晚晨]|(?:上|本|下)周|周[一二三四五六日天]|星期|早上|上午|中午|下午|晚上|凌晨|\d+\s*[年月日号点时]|\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/]\d{1,2}|\d{1,2}[:：]\d{2}|默认.*时间|时间.*默认/.test(text);
  const budgetWasRequested=(value:unknown,text:string)=>value===null?/预算.*(?:默认|自动)|(?:默认|自动).*预算/.test(text):options.budgetBuckets.some(b=>b.id===value&&text.includes(b.name));
  const exclusionWasRequested=(value:unknown,text:string)=>value===true?/不计(?:入)?预算|不占(?:用)?预算/.test(text)&&!/取消|恢复/.test(text):/取消.*不计|恢复.*预算/.test(text)||/计入预算/.test(text)&&!/不计(?:入)?预算/.test(text);
- const sanitize=(changes:FieldChange[])=>changes.filter(c=>c.field==='budgetBucketId'?budgetWasRequested(c.value,rawText):c.field==='excludeFromBudget'?exclusionWasRequested(c.value,rawText):true).map(c=>{
+ const sanitize=(changes:FieldChange[],text:string)=>changes.filter(c=>text.trim()&&(accountFields.includes(c.field as typeof accountFields[number])?(c.value===null?/账户|付款|收款|转出|转入/.test(text):accountWasNamed(c.value,text)):c.field==='occurredAt'?dateWasSpecified(text):c.field==='budgetBucketId'?budgetWasRequested(c.value,text):c.field==='excludeFromBudget'?exclusionWasRequested(c.value,text):true)).map(c=>{
   const category=[...options.expenseCategories,...options.incomeCategories].find(x=>x.id===c.value);
-  return {...c,origin:c.field==='categoryId'&&!(category&&rawText.includes(category.name))?'suggested' as const:'explicit' as const};
+  return {...c,origin:c.field==='categoryId'&&!(category&&text.includes(category.name))?'suggested' as const:'explicit' as const};
  });
- next.updates=next.updates.map(u=>({...u,changes:sanitize(u.changes)})).filter(u=>u.changes.length);
- if(next.ambiguity)next.ambiguity.proposedChanges=sanitize(next.ambiguity.proposedChanges);
+ next.updates=next.updates.map(u=>{const item=state.items.find(i=>i.draft.draftId===u.draftId);return {...u,changes:sanitize(u.changes,item?targetEvidence(updateText,item.ordinal):updateText)};}).filter(u=>u.changes.length);
+ if(next.ambiguity)next.ambiguity.proposedChanges=sanitize(next.ambiguity.proposedChanges,updateText);
  // Application owns defaults; model guesses must not become explicit user budget choices.
  for(const addition of next.additions){
+  assertCandidates(['accountId','categoryId','budgetBucketId','fromAccountId','toAccountId'].map(field=>({field:field as FieldChange['field'],value:addition[field as keyof typeof addition],origin:'explicit'})),options);
+  const source=addition.sourceText.split(/[，,；;。]/).filter(part=>!ordinalPattern.test(part)).join(' ');
+  const shared=!next.updates.length&&!ordinalPattern.test(rawText);
+  for(const field of accountFields){
+   const named=accountWasNamed(addition[field],source)||!state.items.length&&next.additions.length===1&&accountWasNamed(addition[field],rawText)||shared&&/都|全部|全是|均/.test(rawText)&&accountWasNamed(addition[field],rawText);
+   if(!named&&addition[field]!==state.intentSeed?.accountId)addition[field]=null;
+  }
+  const sharedDate=shared&&/^(?:记一下|帮我记|记录)?(?:今天|昨天|前天|今早|昨晚|\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d+月\d+[日号])/.test(rawText);
+  if(!dateWasSpecified(source)&&!sharedDate)addition.occurredAt=null;
   if(!budgetWasRequested(addition.budgetBucketId,addition.sourceText))addition.budgetBucketId=null;
   if(!exclusionWasRequested(addition.excludeFromBudget,addition.sourceText))addition.excludeFromBudget=false;
+ }
+ const targets=state.items.filter(editable);
+ const focused=state.pendingQuestion?.kind==='field'&&state.pendingQuestion.targetIds.length===1;
+ if(next.routeDomain===null&&targets.length>1&&!focused&&/[这那](?:一)?[笔条]|(?:刚才|刚刚)(?:那|这)?(?:一)?笔/.test(rawText)&&/改|换|更正/.test(rawText)){
+  const changes=next.ambiguity?.proposedChanges.length?next.ambiguity.proposedChanges:next.updates[0]?.changes??[];
+  return {...next,kind:next.additions.length?'patch':'clarify',updates:[],ambiguity:{kind:'target',field:next.ambiguity?.field??changes[0]?.field??null,targetIds:targets.map(i=>i.draft.draftId),proposedChanges:changes}};
  }
  return next;
 }
@@ -36,8 +68,9 @@ function deterministicText(state:FinanceConversation,rawText:string,options:Agen
  const text=rawText.trim(),q=state.pendingQuestion;
  const choice=q?.choices.filter(c=>c.label===text);
  if(q&&choice?.length===1)return resolveFinanceSelection(state,{kind:'selection',questionId:q.id,choiceId:choice[0].id},options);
+ if(q?.field==='accountId'&&q.targetIds.length>1&&/^(不是|不一样|不同|不是同一个)(?:账户)?[。！!]*$/.test(text))return {...empty(),kind:'clarify',ambiguity:{kind:'field',field:'accountId',targetIds:[q.targetIds[0]],proposedChanges:[]}};
  const all=options.accounts.filter(a=>new RegExp(`^都是${a.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}(?:付的|支付|付款)?[。！!]*$`).test(text));
- if(all.length===1){const result=empty();result.updates=state.items.filter(i=>editable(i)&&i.draft.type==='expense').map(i=>({draftId:i.draft.draftId,changes:[{field:'accountId',value:all[0].id,origin:'explicit'}]}));if(result.updates.length)return result;}
+ if(all.length===1){const result=empty();result.updates=state.items.filter(i=>editable(i)&&i.draft.type==='expense'&&(!(q?.field==='accountId'&&q.targetIds.length)||q.targetIds.includes(i.draft.draftId))).map(i=>({draftId:i.draft.draftId,changes:[{field:'accountId',value:all[0].id,origin:'explicit'}]}));if(result.updates.length)return result;}
  const ordinal=text.match(/^第([一二三四五六七八九十]|\d+)笔(?:不计预算|不计入预算)[。！!]*$/);
  if(ordinal){const n=Number(ordinal[1])||'一二三四五六七八九十'.indexOf(ordinal[1])+1;const item=state.items.find(i=>i.ordinal===n&&editable(i)&&i.draft.type==='expense');if(!item)invalidConversation();return {...empty(),updates:[{draftId:item.draft.draftId,changes:[{field:'excludeFromBudget',value:true,origin:'explicit'}]}]};}
  return null;
@@ -74,7 +107,7 @@ export async function handleFinanceTurn(input:FinanceTurnInput,options:AgentFina
   const accounts=options.accounts.filter(a=>a.name===rawText);
   if(!state.items.some(editable)&&accounts.length===1){
    state.intentSeed={rawText,accountId:accounts[0].id};result=empty();
-  }else result=deterministicText(state,rawText,options)??sanitizeOrigins(parseModelFinanceTurn(await dependencies.interpret(buildFinanceModelContext(input,state,options,dependencies.now))),rawText,options);
+  }else result=deterministicText(state,rawText,options)??sanitizeOrigins(parseModelFinanceTurn(await dependencies.interpret(buildFinanceModelContext(input,state,options,dependencies.now))),rawText,options,state);
  }
  parseModelFinanceTurn(result);
  if(result.kind==='route')return {state:input.state??state,message:result.routeDomain==='mixed'?'请把财务和事务分开发送；当前草稿保留。':'这条信息将交给相应入口，财务草稿保留。',routeDomain:result.routeDomain};
